@@ -102,6 +102,7 @@ const zdjeciaInput = document.querySelector("#zdjecia");
 const photoPreview = document.querySelector("#photo-preview");
 let photoPreviewUrls = [];
 let selectedPhotoFiles = [];
+let photoSelectionError = null;
 
 const form = document.querySelector("#place-form");
 const submitBtn = document.querySelector("#submit-btn");
@@ -444,6 +445,7 @@ function renderPhotoPreviews() {
 
 zdjeciaInput.addEventListener("change", () => {
     const nowePliki = [...zdjeciaInput.files];
+    photoSelectionError = null;
 
     let pierwszyBlad = null;
     let przekroczonoLimit = false;
@@ -484,6 +486,7 @@ zdjeciaInput.addEventListener("change", () => {
     zdjeciaInput.value = "";
 
     if (pierwszyBlad) {
+        photoSelectionError = pierwszyBlad;
         showMessage(pierwszyBlad, true);
         return;
     }
@@ -521,6 +524,15 @@ zdjeciaInput.addEventListener("change", () => {
 
 form.addEventListener("submit", async event => {
     event.preventDefault();
+
+    if (photoSelectionError) {
+        showMessage(
+            `${photoSelectionError} Usuń problem lub wybierz poprawne zdjęcie przed wysłaniem zgłoszenia.`,
+            true
+        );
+
+        return;
+    }
 
     if (!latInput.value || !lngInput.value) {
         showMessage("Najpierw kliknij miejsce na mapie.", true);
@@ -634,6 +646,7 @@ form.addEventListener("submit", async event => {
 
         form.reset();
         selectedPhotoFiles = [];
+        photoSelectionError = null;
         zdjeciaInput.value = "";
         clearPhotoPreviewUrls();
 
