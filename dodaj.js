@@ -133,6 +133,34 @@ const grayMarkerIcon = L.divIcon({
     popupAnchor: [0, -42]
 });
 
+const DOZWOLONE_TYPY_ZDJEC = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+]);
+
+const MAKSYMALNY_ROZMIAR_ZDJECIA = 20 * 1024 * 1024; // 20 MB
+
+function walidujZdjecie(file) {
+    if (!file) {
+        return "Nie wybrano pliku.";
+    }
+
+    if (!DOZWOLONE_TYPY_ZDJEC.has(file.type)) {
+        return `Plik „${file.name}” nie jest obsługiwanym zdjęciem. Dozwolone są JPG, PNG i WebP.`;
+    }
+
+    if (file.size <= 0) {
+        return `Plik „${file.name}” jest pusty.`;
+    }
+
+    if (file.size > MAKSYMALNY_ROZMIAR_ZDJECIA) {
+        return `Plik „${file.name}” jest za duży. Maksymalny rozmiar to 20 MB.`;
+    }
+
+    return null;
+}
+
 function clearPhotoPreviewUrls() {
     photoPreviewUrls.forEach(url => {
         URL.revokeObjectURL(url);
@@ -338,9 +366,36 @@ typOkresuInput.addEventListener("change", () => {
 zdjeciaInput.addEventListener("change", () => {
     clearPhotoPreviewUrls();
 
-    const files = [...zdjeciaInput.files].slice(0, 3);
+    const wszystkiePliki = [...zdjeciaInput.files];
+    const poprawnePliki = [];
 
-    files.forEach(file => {
+    let pierwszyBlad = null;
+
+    for (const file of wszystkiePliki) {
+        const blad = walidujZdjecie(file);
+
+        if (blad) {
+            if (!pierwszyBlad) {
+                pierwszyBlad = blad;
+            }
+
+            continue;
+        }
+
+        if (poprawnePliki.length < 3) {
+            poprawnePliki.push(file);
+        }
+    }
+
+    const dataTransfer = new DataTransfer();
+
+    poprawnePliki.forEach(file => {
+        dataTransfer.items.add(file);
+    });
+
+    zdjeciaInput.files = dataTransfer.files;
+
+    poprawnePliki.forEach(file => {
         const previewUrl = URL.createObjectURL(file);
 
         photoPreviewUrls.push(previewUrl);
@@ -349,12 +404,34 @@ zdjeciaInput.addEventListener("change", () => {
         img.src = previewUrl;
         img.alt = file.name;
 
+        img.addEventListener("error", () => {
+            img.remove();
+        });
+
         photoPreview.appendChild(img);
     });
 
-    if (zdjeciaInput.files.length > 3) {
+    if (pierwszyBlad) {
+        showMessage(pierwszyBlad, true);
+        return;
+    }
+
+    if (wszystkiePliki.length > 3) {
         showMessage(
-            "Możesz dodać maksymalnie 3 zdjęcia. Zostaną wysłane tylko pierwsze 3.",
+            "Możesz dodać maksymalnie 3 zdjęcia. Zachowano pierwsze 3 prawidłowe pliki.",
+            false
+        );
+        return;
+    }
+
+    if (poprawnePliki.length > 0) {
+        const odmiana =
+            poprawnePliki.length === 1
+                ? "zdjęcie"
+                : "zdjęcia";
+
+        showMessage(
+            `Wybrano ${poprawnePliki.length} ${odmiana}.`,
             false
         );
     }
@@ -381,6 +458,22 @@ form.addEventListener("submit", async event => {
     if (typOkresuInput.value === "ogólny okres" && !ogolnyOkresInput.value) {
         showMessage("Wybierz ogólny okres.", true);
         return;
+    }
+
+    const filesToUpload = [...zdjeciaInput.files];
+
+    if (filesToUpload.length > 3) {
+        showMessage("Możesz przesłać maksymalnie 3 zdjęcia.", true);
+        return;
+    }
+
+    for (const file of filesToUpload) {
+        const blad = walidujZdjecie(file);
+
+        if (blad) {
+            showMessage(blad, true);
+            return;
+        }
     }
 
     submitBtn.disabled = true;
@@ -420,9 +513,7 @@ form.addEventListener("submit", async event => {
 
         const zgloszenieId = data.id;
 
-        const files = [...zdjeciaInput.files].slice(0, 3);
-
-        for (const file of files) {
+        for (const file of filesToUpload) {
             const compressed = await compressImage(file);
 
             const safeName = file.name
@@ -469,8 +560,17 @@ form.addEventListener("submit", async event => {
 
         showMessage("Zgłoszenie zostało wysłane. Dziękujemy!", false);
     } catch (error) {
-        console.error(error);
-        showMessage("Wystąpił błąd podczas wysyłania zgłoszenia. Sprawdź konsolę.", true);
+        console.error(
+            "Błąd wysyłania zgłoszenia:",
+            error
+        );
+
+        const komunikat =
+            error instanceof Error && error.message
+                ? error.message
+                : "Wystąpił błąd podczas wysyłania zgłoszenia.";
+
+        showMessage(komunikat, true);
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = "Wyślij zgłoszenie";
@@ -532,51 +632,180 @@ async function reverseGeocode(lat, lng) {
 }
 
 async function compressImage(file) {
-    return new Promise(resolve => {
+    const bladWalidacji = walidujZdjecie(file);
+
+    if (bladWalidacji) {
+        throw new Error(bladWalidacji);
+    }
+
+    return new Promise((resolve, reject) => {
         const img = new Image();
         const reader = new FileReader();
 
-        reader.onload = event => {
-            img.src = event.target.result;
+        const cleanup = () => {
+            img.onload = null;
+            img.onerror = null;
+            reader.onload = null;
+            reader.onerror = null;
+            reader.onabort = null;
         };
 
-        img.onload = () => {
-            const maxWidth = 1600;
-            const maxHeight = 1600;
+        reader.onerror = () => {
+            cleanup();
 
-            let { width, height } = img;
-
-            if (width > height && width > maxWidth) {
-                height = Math.round(height * maxWidth / width);
-                width = maxWidth;
-            } else if (height > maxHeight) {
-                width = Math.round(width * maxHeight / height);
-                height = maxHeight;
-            }
-
-            const canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
-
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0, width, height);
-
-            canvas.toBlob(
-                blob => {
-                    const compressedFile = new File(
-                        [blob],
-                        file.name.replace(/\.[^/.]+$/, ".jpg"),
-                        { type: "image/jpeg" }
-                    );
-
-                    resolve(compressedFile);
-                },
-                "image/jpeg",
-                0.78
+            reject(
+                new Error(
+                    `Nie udało się odczytać pliku „${file.name}”.`
+                )
             );
         };
 
-        reader.readAsDataURL(file);
+        reader.onabort = () => {
+            cleanup();
+
+            reject(
+                new Error(
+                    `Odczyt pliku „${file.name}” został przerwany.`
+                )
+            );
+        };
+
+        reader.onload = event => {
+            if (
+                !event.target ||
+                typeof event.target.result !== "string"
+            ) {
+                cleanup();
+
+                reject(
+                    new Error(
+                        `Plik „${file.name}” ma nieprawidłową zawartość.`
+                    )
+                );
+
+                return;
+            }
+
+            img.src = event.target.result;
+        };
+
+        img.onerror = () => {
+            cleanup();
+
+            reject(
+                new Error(
+                    `Plik „${file.name}” nie jest prawidłowym obrazem.`
+                )
+            );
+        };
+
+        img.onload = () => {
+            try {
+                const maxWidth = 1600;
+                const maxHeight = 1600;
+
+                let width = img.naturalWidth;
+                let height = img.naturalHeight;
+
+                if (
+                    !Number.isFinite(width) ||
+                    !Number.isFinite(height) ||
+                    width <= 0 ||
+                    height <= 0
+                ) {
+                    throw new Error(
+                        `Nie udało się odczytać wymiarów zdjęcia „${file.name}”.`
+                    );
+                }
+
+                if (width > height && width > maxWidth) {
+                    height = Math.round(
+                        height * maxWidth / width
+                    );
+
+                    width = maxWidth;
+                } else if (height > maxHeight) {
+                    width = Math.round(
+                        width * maxHeight / height
+                    );
+
+                    height = maxHeight;
+                }
+
+                const canvas = document.createElement("canvas");
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext("2d");
+
+                if (!ctx) {
+                    throw new Error(
+                        "Przeglądarka nie obsługuje przetwarzania zdjęć."
+                    );
+                }
+
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                    blob => {
+                        cleanup();
+
+                        if (!blob || blob.size <= 0) {
+                            reject(
+                                new Error(
+                                    `Nie udało się skompresować zdjęcia „${file.name}”.`
+                                )
+                            );
+
+                            return;
+                        }
+
+                        const baseName =
+                            file.name
+                                .replace(/\.[^/.]+$/, "")
+                                .trim() || "zdjecie";
+
+                        const compressedFile = new File(
+                            [blob],
+                            `${baseName}.jpg`,
+                            {
+                                type: "image/jpeg",
+                                lastModified: Date.now()
+                            }
+                        );
+
+                        resolve(compressedFile);
+                    },
+                    "image/jpeg",
+                    0.78
+                );
+            } catch (error) {
+                cleanup();
+
+                reject(
+                    error instanceof Error
+                        ? error
+                        : new Error(
+                            "Nie udało się przetworzyć zdjęcia."
+                        )
+                );
+            }
+        };
+
+        try {
+            reader.readAsDataURL(file);
+        } catch (error) {
+            cleanup();
+
+            reject(
+                error instanceof Error
+                    ? error
+                    : new Error(
+                        `Nie udało się otworzyć pliku „${file.name}”.`
+                    )
+            );
+        }
     });
 }
 
