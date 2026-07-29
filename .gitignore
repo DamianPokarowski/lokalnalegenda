@@ -1,0 +1,40 @@
+# Sekrety i konfiguracja lokalna
+.env
+.env.*
+!.env.example
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Edytory
+.vscode/
+.idea/
+
+# Logi
+*.log
+
+# Kopie i pliki tymczasowe
+*.bak
+*.tmp
+*.temp
+*~
+backup*
+kopia*
+*_backup.*
+*_kopia.*
+
+# Eksporty i dane robocze
+*.sql
+*.dump
+*.csv
+*.zip
+*.rar
+*.7z
+
+# Netlify
+.netlify/
+
+# Node
+node_modules/

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Dodaj miejsce - LokalnaLegenda.pl</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css">
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="dodaj.css">
+
+</head>
+
+<body>
+  <div class="top-bar">
+    <a href="index.html" class="top-logo">
+      <img src="assets/images/LokalnaLegenda.pl.png" alt="LokalnaLegenda.pl">
+    </a>
+  </div>
+
+  <main class="submit-layout">
+    <section class="form-panel">
+      <h1>Dodaj miejsce</h1>
+      <p class="intro">Kliknij miejsce na mapie, uzupełnij informacje i wyślij zgłoszenie do weryfikacji.</p>
+
+      <form id="place-form">
+
+        <label>Nazwa miejsca *</label>
+        <input type="text" id="nazwa" required>
+
+        <label>Kategoria *</label>
+        <select id="kategoria" required>
+          <option value="">Wybierz...</option>
+          <option value="lokalna legenda">📜 Lokalna legenda</option>
+          <option value="nawiedzone miejsce">👻 Nawiedzone miejsce</option>
+          <option value="opuszczony obiekt">🏚 Opuszczony obiekt</option>
+          <option value="tragiczne wydarzenie">⚰️ Tragiczne wydarzenie</option>
+          <option value="obserwacja ufo">🛸 Obserwacja UFO</option>
+          <option value="kryptozoologia">🐺 Kryptozoologia</option>
+          <option value="niewyjaśnione zjawisko">❓ Niewyjaśnione zjawisko</option>
+        </select>
+
+        <label>Opis *</label>
+        <textarea id="opis" rows="6" required></textarea>
+
+        <label>Typ miejsca *</label>
+        <select id="typ_miejsca" required>
+          <option value="">Wybierz...</option>
+          <option value="las">🌲 Las</option>
+          <option value="droga">🚗 Droga</option>
+          <option value="most">🌉 Most</option>
+          <option value="dom">🏠 Dom</option>
+          <option value="opuszczony budynek">🏚️ Opuszczony budynek</option>
+          <option value="ruiny">🧱 Ruiny</option>
+          <option value="cmentarz">⚰️ Cmentarz</option>
+          <option value="kościół">⛪ Kościół</option>
+          <option value="kapliczka">✝️ Kapliczka</option>
+          <option value="zamek">🏰 Zamek</option>
+          <option value="pałac">🏛️ Pałac</option>
+          <option value="jezioro">🏞️ Jezioro</option>
+          <option value="rzeka">🌊 Rzeka</option>
+          <option value="staw">🦆 Staw</option>
+          <option value="bagno">🌫️ Bagno</option>
+          <option value="góra">⛰️ Góra</option>
+          <option value="wzgórze">🌄 Wzgórze</option>
+          <option value="jaskinia">🦇 Jaskinia</option>
+          <option value="park">🌳 Park</option>
+          <option value="pole">🌾 Pole</option>
+          <option value="łąka">🌼 Łąka</option>
+          <option value="niebo">🌌 Niebo</option>
+          <option value="inne">🤔 Inne</option>
+        </select>
+
+        <label>Dokładność lokalizacji *</label>
+        <select id="dokladnosc_miejsca" required>
+          <option value="">Wybierz...</option>
+          <option value="dokładna">Dokładna ≤10 m</option>
+          <option value="przybliżona">Przybliżona 10–50 m</option>
+          <option value="orientacyjna">Orientacyjna 50–200 m</option>
+          <option value="ogólna">Ogólna >200 m</option>
+        </select>
+
+        <label>Miejscowość</label>
+        <input type="text" id="miejscowosc" readonly>
+
+        <div class="geo-grid">
+          <div>
+            <label>Gmina</label>
+            <input type="text" id="gmina" readonly>
+          </div>
+          <div>
+            <label>Powiat</label>
+            <input type="text" id="powiat" readonly>
+          </div>
+          <div>
+            <label>Województwo</label>
+            <input type="text" id="wojewodztwo" readonly>
+          </div>
+        </div>
+
+        <label>Typ źródła *</label>
+        <select id="typ_zrodla" required>
+          <option value="">Wybierz...</option>
+          <option value="własne doświadczenie">Własne doświadczenie</option>
+          <option value="przekaz ustny">Przekaz ustny</option>
+          <option value="internet">Internet</option>
+          <option value="literatura">Literatura</option>
+          <option value="inne">Inne</option>
+        </select>
+
+        <div id="osoba-wrapper" class="hidden">
+          <label>Osoba przekazująca</label>
+          <select id="osoba_przekazujaca">
+            <option value="">Wybierz...</option>
+            <option value="babcia">Babcia</option>
+            <option value="dziadek">Dziadek</option>
+            <option value="rodzic">Rodzic</option>
+            <option value="rodzeństwo">Rodzeństwo</option>
+            <option value="inny członek rodziny">Inny członek rodziny</option>
+            <option value="znajomy">Znajomy</option>
+            <option value="sąsiad">Sąsiad</option>
+            <option value="starszy mieszkaniec">Starszy mieszkaniec</option>
+            <option value="lokalny przewodnik">Lokalny przewodnik</option>
+            <option value="inna osoba">Inna osoba</option>
+          </select>
+        </div>
+
+        <label>Typ okresu *</label>
+        <select id="typ_okresu" required>
+          <option value="">Wybierz...</option>
+          <option value="dokładna data">Dokładna data</option>
+          <option value="ogólny okres">Ogólny okres</option>
+          <option value="nieznany">Nieznany</option>
+        </select>
+
+        <div id="dokladna-data-wrapper" class="hidden">
+          <label>Dokładna data</label>
+          <input type="date" id="dokladna_data">
+        </div>
+
+        <div id="ogolny-okres-wrapper" class="hidden">
+          <label>Ogólny okres</label>
+          <select id="ogolny_okres">
+            <option value="">Wybierz...</option>
+            <option value="Dawno dawno temu">Dawno dawno temu</option>
+            <option value="XVIII wiek">XVIII wiek</option>
+            <option value="XIX wiek">XIX wiek</option>
+            <option value="XX wiek">XX wiek</option>
+            <option value="XXI wiek">XXI wiek</option>
+          </select>
+        </div>
+
+        <label>Zdjęcia</label>
+        <input type="file" id="zdjecia" accept="image/jpeg,image/png,image/webp" multiple>
+        <p class="hint">Dodaj maksymalnie 3 zdjęcia.</p>
+
+        <div id="photo-preview" class="photo-preview"></div>
+
+        <input type="hidden" id="lat">
+        <input type="hidden" id="lng">
+
+        <button type="submit" id="submit-btn">Wyślij zgłoszenie</button>
+
+        <p id="form-message"></p>
+      </form>
+    </section>
+    <section class="map-panel">
+      <div class="basemap-control" id="basemap-control">
+        <button id="basemap-toggle" class="basemap-toggle" type="button"></button>
+
+        <div class="basemap-options">
+          <button class="basemap-btn active" data-layer="osm">🗺 Standard</button>
+          <button class="basemap-btn" data-layer="dark">🌑 Ciemna</button>
+          <button class="basemap-btn" data-layer="topo">🌄 Topograficzna</button>
+          <button class="basemap-btn" data-layer="satellite">🛰 Satelita</button>
+        </div>
+      </div>
+
+      <div id="map"></div>
+      <div class="map-hint">Kliknij na mapie, aby wskazać lokalizację miejsca.</div>
+    </section>
+  </main>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="dodaj.js?v=20260711-3"></script>
+</body>
+
+</html>

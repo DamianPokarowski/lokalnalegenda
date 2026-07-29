@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel administratora | LokalnaLegenda.pl</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+  <div id="loginView" class="login-view">
+    <section class="login-card">
+      <div class="brand-mark">L</div>
+      <h1>LokalnaLegenda.pl</h1>
+      <p class="login-subtitle">Panel administratora</p>
+
+      <form id="loginForm" class="login-form">
+        <label>
+          Adres e-mail
+          <input type="email" id="loginEmail" autocomplete="username" required>
+        </label>
+
+        <label>
+          Hasło
+          <input type="password" id="loginPassword" autocomplete="current-password" required>
+        </label>
+
+        <button type="submit" class="primary-btn">Zaloguj się</button>
+        <p id="loginMessage" class="login-message"></p>
+      </form>
+
+      <p class="demo-note">
+        Dostęp wyłącznie dla uprawnionych administratorów.
+      </p>
+    </section>
+  </div>
+
+  <div id="appView" class="app-view hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark small">L</div>
+        <div>
+          <strong>LokalnaLegenda.pl</strong>
+          <span>Panel administratora</span>
+        </div>
+      </div>
+
+      <nav>
+        <button class="nav-btn active" data-view="dashboard">⌂ <span>Pulpit</span></button>
+        <button class="nav-btn" data-view="records">▦ <span>Obiekty</span></button>
+        <button class="nav-btn" id="addRecordBtn">＋ <span>Dodaj obiekt</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span>Zalogowany jako</span>
+        <strong>Administrator</strong>
+        <button id="logoutBtn" class="logout-btn">Wyloguj</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle">Pulpit</h2>
+          <p id="pageSubtitle">Podsumowanie obiektów w bazie</p>
+        </div>
+        <button class="primary-btn compact" id="topAddBtn">＋ Dodaj obiekt</button>
+      </header>
+
+      <section id="dashboardView" class="content-view">
+        <div class="stats-grid">
+          <button class="stat-card" data-status="do_weryfikacji">
+            <span class="stat-label">Do weryfikacji</span>
+            <strong id="countPending">0</strong>
+            <small>Otwórz listę zgłoszeń</small>
+          </button>
+
+          <button class="stat-card" data-status="opublikowany">
+            <span class="stat-label">Opublikowane</span>
+            <strong id="countPublished">0</strong>
+            <small>Widoczne na publicznej mapie</small>
+          </button>
+
+          <button class="stat-card" data-status="odrzucony">
+            <span class="stat-label">Odrzucone</span>
+            <strong id="countRejected">0</strong>
+            <small>Nie są publikowane</small>
+          </button>
+        </div>
+
+        <section class="panel recent-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Najnowsze obiekty do weryfikacji</h3>
+              <p>Kliknij rekord, aby przejść do edycji.</p>
+            </div>
+            <button id="showAllBtn" class="secondary-btn">Pokaż wszystkie</button>
+          </div>
+          <div id="recentRecords" class="recent-list"></div>
+        </section>
+      </section>
+
+      <section id="recordsView" class="content-view hidden">
+        <section class="panel records-panel">
+          <div class="filters">
+            <label>
+              Status
+              <select id="statusFilter">
+                <option value="all">Wszystkie</option>
+                <option value="do_weryfikacji">Do weryfikacji</option>
+                <option value="opublikowany">Opublikowane</option>
+                <option value="odrzucony">Odrzucone</option>
+              </select>
+            </label>
+
+            <label>
+              Kategoria
+              <select id="categoryFilter">
+                <option value="all">Wszystkie</option>
+              </select>
+            </label>
+
+            <label class="search-field">
+              Szukaj
+              <input id="searchInput" type="search" placeholder="Nazwa, miejscowość, gmina...">
+            </label>
+
+            <button id="resetFilters" class="secondary-btn filter-reset">Wyczyść filtry</button>
+          </div>
+
+          <div class="table-meta">
+            <span id="recordCount">0 obiektów</span>
+            <span>Kliknij wiersz, aby edytować rekord i lokalizację.</span>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Status</th>
+                  <th>Nazwa</th>
+                  <th>Kategoria</th>
+                  <th>Okres</th>
+                  <th>Województwo</th>
+                  <th>Powiat</th>
+                  <th>Gmina</th>
+                  <th>Miejscowość</th>
+                  <th>Dokładność</th>
+                  <th>Duplikaty</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+
+  <div id="addOverlay" class="add-overlay hidden">
+    <section class="add-screen">
+      <header class="add-header">
+        <div>
+          <span class="eyebrow">Panel administratora</span>
+          <h2>Dodaj miejsce</h2>
+          <p>Formularz działa tak samo jak ankieta dostępna dla użytkowników z dodatkową opcją wybrania statusu po
+            zapisaniu.</p>
+        </div>
+        <button id="closeAddForm" class="icon-btn" aria-label="Zamknij">×</button>
+      </header>
+
+      <div class="admin-submit-layout">
+        <section class="admin-form-panel">
+          <form id="admin-place-form">
+            <label>Nazwa miejsca *</label>
+            <input type="text" id="addNazwa" required>
+
+            <label>Kategoria *</label>
+            <select id="addKategoria" required>
+              <option value="">Wybierz...</option>
+              <option value="Lokalna legenda">📜 Lokalna legenda</option>
+              <option value="Nawiedzone miejsce">👻 Nawiedzone miejsce</option>
+              <option value="Opuszczony obiekt">🏚 Opuszczony obiekt</option>
+              <option value="Tragiczne wydarzenie">⚰️ Tragiczne wydarzenie</option>
+              <option value="Obserwacja UFO">🛸 Obserwacja UFO</option>
+              <option value="Kryptozoologia">🐺 Kryptozoologia</option>
+              <option value="Niewyjaśnione zjawisko">❓ Niewyjaśnione zjawisko</option>
+            </select>
+
+            <label>Opis *</label>
+            <textarea id="addOpis" rows="6" required></textarea>
+
+            <label>Typ miejsca *</label>
+            <select id="addTypMiejsca" required>
+              <option value="">Wybierz...</option>
+              <option value="las">🌲 Las</option>
+              <option value="droga">🚗 Droga</option>
+              <option value="most">🌉 Most</option>
+              <option value="dom">🏠 Dom</option>
+              <option value="opuszczony budynek">🏚️ Opuszczony budynek</option>
+              <option value="ruiny">🧱 Ruiny</option>
+              <option value="cmentarz">⚰️ Cmentarz</option>
+              <option value="kościół">⛪ Kościół</option>
+              <option value="kapliczka">✝️ Kapliczka</option>
+              <option value="zamek">🏰 Zamek</option>
+              <option value="pałac">🏛️ Pałac</option>
+              <option value="jezioro">🏞️ Jezioro</option>
+              <option value="rzeka">🌊 Rzeka</option>
+              <option value="staw">🦆 Staw</option>
+              <option value="bagno">🌫️ Bagno</option>
+              <option value="góra">⛰️ Góra</option>
+              <option value="wzgórze">🌄 Wzgórze</option>
+              <option value="jaskinia">🦇 Jaskinia</option>
+              <option value="park">🌳 Park</option>
+              <option value="pole">🌾 Pole</option>
+              <option value="łąka">🌼 Łąka</option>
+              <option value="niebo">🌌 Niebo</option>
+              <option value="inne">🤔 Inne</option>
+            </select>
+
+            <label>Dokładność lokalizacji *</label>
+            <select id="addDokladnosc" required>
+              <option value="">Wybierz...</option>
+              <option value="Dokładna ≤10 m">Dokładna ≤10 m</option>
+              <option value="Przybliżona 10–50 m">Przybliżona 10–50 m</option>
+              <option value="Orientacyjna 50–200 m">Orientacyjna 50–200 m</option>
+              <option value="Ogólna >200 m">Ogólna >200 m</option>
+            </select>
+
+            <label>Miejscowość</label><input type="text" id="addMiejscowosc" readonly>
+            <label>Gmina</label><input type="text" id="addGmina" readonly>
+            <label>Powiat</label><input type="text" id="addPowiat" readonly>
+            <label>Województwo</label><input type="text" id="addWojewodztwo" readonly>
+
+            <label>Typ źródła *</label>
+            <select id="addTypZrodla" required>
+              <option value="">Wybierz...</option>
+              <option value="własne doświadczenie">Własne doświadczenie</option>
+              <option value="przekaz ustny">Przekaz ustny</option>
+              <option value="internet">Internet</option>
+              <option value="literatura">Literatura</option>
+              <option value="inne">Inne</option>
+            </select>
+
+            <div id="addOsobaWrapper" class="hidden">
+              <label>Osoba przekazująca</label>
+              <select id="addOsoba">
+                <option value="">Wybierz...</option>
+                <option value="babcia">Babcia</option>
+                <option value="dziadek">Dziadek</option>
+                <option value="rodzic">Rodzic</option>
+                <option value="rodzeństwo">Rodzeństwo</option>
+                <option value="inny członek rodziny">Inny członek rodziny</option>
+                <option value="znajomy">Znajomy</option>
+                <option value="sąsiad">Sąsiad</option>
+                <option value="starszy mieszkaniec">Starszy mieszkaniec</option>
+                <option value="lokalny przewodnik">Lokalny przewodnik</option>
+                <option value="inna osoba">Inna osoba</option>
+              </select>
+            </div>
+
+            <label>Typ okresu *</label>
+            <select id="addTypOkresu" required>
+              <option value="">Wybierz...</option>
+              <option value="dokładna data">Dokładna data</option>
+              <option value="ogólny okres">Ogólny okres</option>
+              <option value="nieznany">Nieznany</option>
+            </select>
+
+            <div id="addDokladnaWrapper" class="hidden">
+              <label>Dokładna data</label><input type="date" id="addDokladnaData">
+            </div>
+            <div id="addOgolnyWrapper" class="hidden">
+              <label>Ogólny okres</label>
+              <select id="addOgolnyOkres">
+                <option value="">Wybierz...</option>
+                <option value="Dawno dawno temu">Dawno dawno temu</option>
+                <option value="XVIII wiek">XVIII wiek</option>
+                <option value="XIX wiek">XIX wiek</option>
+                <option value="XX wiek">XX wiek</option>
+                <option value="XXI wiek">XXI wiek</option>
+              </select>
+            </div>
+
+            <label>Zdjęcia</label>
+            <input type="file" id="addZdjecia" accept="image/jpeg,image/png,image/webp" multiple>
+            <p class="hint">Dodaj maksymalnie 3 zdjęcia.</p>
+            <div id="addPhotoPreview" class="photo-preview"></div>
+
+            <label>Status po zapisaniu *</label>
+            <select id="addStatus" required>
+              <option value="do_weryfikacji">Do weryfikacji</option>
+              <option value="opublikowany">Opublikowany</option>
+            </select>
+
+            <input type="hidden" id="addLat"><input type="hidden" id="addLng">
+            <button type="submit" class="primary-btn add-submit-btn">Dodaj obiekt</button>
+            <p id="addFormMessage" class="add-form-message"></p>
+          </form>
+        </section>
+
+        <section class="admin-add-map-panel">
+          <div id="addMap"></div>
+          <div class="map-hint">Kliknij na mapie, aby wskazać lokalizację miejsca.</div>
+        </section>
+      </div>
+    </section>
+  </div>
+
+
+  <div id="editorOverlay" class="editor-overlay hidden">
+    <section class="editor">
+      <header class="editor-header">
+        <div>
+          <span class="eyebrow">Edycja obiektu</span>
+          <h2 id="editorTitle">Obiekt</h2>
+          <p>Formularz edycji zawiera dokładnie te same pola i zależności co formularz dodawania.</p>
+        </div>
+        <button id="closeEditor" class="icon-btn" aria-label="Zamknij">×</button>
+      </header>
+
+      <div class="editor-body">
+        <section class="attributes-panel editor-form-panel">
+          <div id="duplicateAlert" class="duplicate-alert hidden"></div>
+
+          <form id="edit-place-form">
+            <label>Status *</label>
+            <select id="editStatus" required>
+              <option value="do_weryfikacji">Do weryfikacji</option>
+              <option value="opublikowany">Opublikowany</option>
+              <option value="odrzucony">Odrzucony</option>
+            </select>
+
+            <label>Nazwa miejsca *</label>
+            <input type="text" id="editName" required>
+
+            <label>Kategoria *</label>
+            <select id="editCategory" required>
+              <option value="">Wybierz...</option>
+              <option value="Lokalna legenda">📜 Lokalna legenda</option>
+              <option value="Nawiedzone miejsce">👻 Nawiedzone miejsce</option>
+              <option value="Opuszczony obiekt">🏚 Opuszczony obiekt</option>
+              <option value="Tragiczne wydarzenie">⚰️ Tragiczne wydarzenie</option>
+              <option value="Obserwacja UFO">🛸 Obserwacja UFO</option>
+              <option value="Kryptozoologia">🐺 Kryptozoologia</option>
+              <option value="Niewyjaśnione zjawisko">❓ Niewyjaśnione zjawisko</option>
+            </select>
+
+            <label>Opis *</label>
+            <textarea id="editDescription" rows="6" required></textarea>
+
+            <label>Typ miejsca *</label>
+            <select id="editTypePlace" required>
+              <option value="">Wybierz...</option>
+              <option value="las">🌲 Las</option>
+              <option value="droga">🚗 Droga</option>
+              <option value="most">🌉 Most</option>
+              <option value="dom">🏠 Dom</option>
+              <option value="opuszczony budynek">🏚️ Opuszczony budynek</option>
+              <option value="ruiny">🧱 Ruiny</option>
+              <option value="cmentarz">⚰️ Cmentarz</option>
+              <option value="kościół">⛪ Kościół</option>
+              <option value="kapliczka">✝️ Kapliczka</option>
+              <option value="zamek">🏰 Zamek</option>
+              <option value="pałac">🏛️ Pałac</option>
+              <option value="jezioro">🏞️ Jezioro</option>
+              <option value="rzeka">🌊 Rzeka</option>
+              <option value="staw">🦆 Staw</option>
+              <option value="bagno">🌫️ Bagno</option>
+              <option value="góra">⛰️ Góra</option>
+              <option value="wzgórze">🌄 Wzgórze</option>
+              <option value="jaskinia">🦇 Jaskinia</option>
+              <option value="park">🌳 Park</option>
+              <option value="pole">🌾 Pole</option>
+              <option value="łąka">🌼 Łąka</option>
+              <option value="niebo">🌌 Niebo</option>
+              <option value="inne">🤔 Inne</option>
+            </select>
+
+            <label>Dokładność lokalizacji *</label>
+            <select id="editAccuracy" required>
+              <option value="">Wybierz...</option>
+              <option value="Dokładna ≤10 m">Dokładna ≤10 m</option>
+              <option value="Przybliżona 10–50 m">Przybliżona 10–50 m</option>
+              <option value="Orientacyjna 50–200 m">Orientacyjna 50–200 m</option>
+              <option value="Ogólna >200 m">Ogólna >200 m</option>
+            </select>
+
+            <label>Miejscowość</label>
+            <input type="text" id="editPlace" readonly>
+
+            <label>Gmina</label>
+            <input type="text" id="editCommune" readonly>
+
+            <label>Powiat</label>
+            <input type="text" id="editCounty" readonly>
+
+            <label>Województwo</label>
+            <input type="text" id="editVoivodeship" readonly>
+
+            <label>Typ źródła *</label>
+            <select id="editSourceType" required>
+              <option value="">Wybierz...</option>
+              <option value="własne doświadczenie">Własne doświadczenie</option>
+              <option value="przekaz ustny">Przekaz ustny</option>
+              <option value="internet">Internet</option>
+              <option value="literatura">Literatura</option>
+              <option value="inne">Inne</option>
+            </select>
+
+            <div id="editPersonWrapper" class="hidden">
+              <label>Osoba przekazująca</label>
+              <select id="editPerson">
+                <option value="">Wybierz...</option>
+                <option value="babcia">Babcia</option>
+                <option value="dziadek">Dziadek</option>
+                <option value="rodzic">Rodzic</option>
+                <option value="rodzeństwo">Rodzeństwo</option>
+                <option value="inny członek rodziny">Inny członek rodziny</option>
+                <option value="znajomy">Znajomy</option>
+                <option value="sąsiad">Sąsiad</option>
+                <option value="starszy mieszkaniec">Starszy mieszkaniec</option>
+                <option value="lokalny przewodnik">Lokalny przewodnik</option>
+                <option value="inna osoba">Inna osoba</option>
+              </select>
+            </div>
+
+            <label>Typ okresu *</label>
+            <select id="editPeriodType" required>
+              <option value="">Wybierz...</option>
+              <option value="dokładna data">Dokładna data</option>
+              <option value="ogólny okres">Ogólny okres</option>
+              <option value="nieznany">Nieznany</option>
+            </select>
+
+            <div id="editExactDateWrapper" class="hidden">
+              <label>Dokładna data</label>
+              <input type="date" id="editExactDate">
+            </div>
+
+            <div id="editGeneralPeriodWrapper" class="hidden">
+              <label>Ogólny okres</label>
+              <select id="editGeneralPeriod">
+                <option value="">Wybierz...</option>
+                <option value="Dawno dawno temu">Dawno dawno temu</option>
+                <option value="XVIII wiek">XVIII wiek</option>
+                <option value="XIX wiek">XIX wiek</option>
+                <option value="XX wiek">XX wiek</option>
+                <option value="XXI wiek">XXI wiek</option>
+              </select>
+            </div>
+
+            <label>Zdjęcia</label>
+            <input type="file" id="editPhotos" accept="image/jpeg,image/png,image/webp" multiple>
+            <p class="hint">Dodaj maksymalnie 3 zdjęcia. Nowo wybrane pliki zastępują podgląd zdjęć rekordu.</p>
+            <div id="editPhotoPreview" class="photo-preview"></div>
+
+            <input type="hidden" id="editLat">
+            <input type="hidden" id="editLng">
+
+            <p id="editFormMessage" class="add-form-message"></p>
+          </form>
+        </section>
+
+        <section class="map-panel">
+          <div id="editorMap"></div>
+          <div class="map-hint">Kliknij mapę lub przeciągnij pinezkę, aby zmienić lokalizację.</div>
+        </section>
+      </div>
+
+      <footer class="editor-footer">
+        <button id="deleteRecord" class="danger-btn">Usuń rekord</button>
+        <div class="footer-actions">
+          <button id="cancelEdit" class="secondary-btn">Anuluj</button>
+          <button id="saveRecord" class="primary-btn">Zapisz zmiany</button>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+
+  <div id="confirmOverlay" class="confirm-overlay hidden">
+    <section class="confirm-card">
+      <h3 id="confirmTitle">Czy na pewno opublikować obiekt?</h3>
+      <p id="confirmText">Po zapisaniu obiekt będzie widoczny na publicznej mapie.</p>
+      <div class="confirm-actions">
+        <button id="cancelConfirm" class="secondary-btn">Anuluj</button>
+        <button id="acceptConfirm" class="primary-btn">Opublikuj</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="photoLightbox" class="photo-lightbox hidden" aria-hidden="true">
+  <button
+    id="closePhotoLightbox"
+    class="photo-lightbox-close"
+    type="button"
+    aria-label="Zamknij podgląd zdjęcia"
+  >
+    ×
+  </button>
+
+  <img
+    id="photoLightboxImage"
+    class="photo-lightbox-image"
+    src=""
+    alt="Podgląd zdjęcia"
+  >
+
+  <p id="photoLightboxCaption" class="photo-lightbox-caption"></p>
+</div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="admin.js"></script>
+</body>
+
+</html>

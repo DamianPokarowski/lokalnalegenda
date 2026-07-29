@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Straszna Mapa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="top-bar">
+
+    <a href="dodaj.html" class="top-side-button top-left">
+
+      <img src="assets/images/Dodajmiejsce.png" alt="Dodaj miejsce">
+
+    </a>
+
+    <a href="index.html" class="top-logo">
+
+      <img src="assets/images/LokalnaLegenda.pl.png" alt="LokalnaLegenda.pl">
+
+    </a>
+
+    <a href="kontakt.html" class="top-side-button top-right">
+
+      <img src="assets/images/Kontakt.png" alt="Kontakt">
+
+    </a>
+
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="search-filter global-search">
+
+        <div class="search-row">
+
+          <input type="text" id="legend-search" placeholder="🔍 Szukaj miejsca..." autocomplete="off">
+
+          <button id="clear-legend" class="clear-search" type="button">
+            ×
+          </button>
+
+        </div>
+        <div id="legend-hint" class="powiat-hint"></div>
+
+      </div>
+
+      <button id="zoom-to-results" class="zoom-results-btn" type="button">
+        Pokaż widoczne miejsca
+      </button>
+
+      <h2>Filtry</h2>
+
+      <details class="filter-section">
+        <summary>
+          <span>Kategoria</span>
+          <button class="toggle-section" data-target="filter-category" type="button">✓</button>
+        </summary>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-category" value="lokalna legenda" checked>
+          <span>📜 Lokalna legenda</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-category" value="nawiedzone miejsce" checked>
+          <span>👻 Nawiedzone miejsce</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-category" value="opuszczony obiekt" checked>
+          <span>🏚 Opuszczony obiekt</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-category" value="tragiczne wydarzenie" checked>
+          <span>⚰️ Tragiczne wydarzenie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-category" value="obserwacja ufo" checked>
+          <span>🛸 Obserwacja UFO</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-category" value="kryptozoologia" checked>
+          <span>🐺 Kryptozoologia</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-category" value="niewyjaśnione zjawisko" checked>
+          <span>❓ Niewyjaśnione zjawisko</span>
+        </label>
+      </details>
+
+      <details class="filter-section">
+        <summary>
+          <span>Typ miejsca</span>
+          <button class="toggle-section" data-target="filter-place" type="button">✓</button>
+        </summary>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="las" checked>
+          <span>🌲 Las</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="droga" checked>
+          <span>🚗 Droga</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="most" checked>
+          <span>🌉 Most</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="dom" checked>
+          <span>🏠 Dom</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="opuszczony budynek" checked>
+          <span>🏚️ Opuszczony budynek</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="ruiny" checked>
+          <span>🧱 Ruiny</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="cmentarz" checked>
+          <span>⚰️ Cmentarz</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="kościół" checked>
+          <span>⛪ Kościół</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="kapliczka" checked>
+          <span>✝️ Kapliczka</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="zamek" checked>
+          <span>🏰 Zamek</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="pałac" checked>
+          <span>🏛️ Pałac</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="jezioro" checked>
+          <span>🏞️ Jezioro</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="rzeka" checked>
+          <span>🌊 Rzeka</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="staw" checked>
+          <span>🦆 Staw</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="bagno" checked>
+          <span>🌫️ Bagno</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="góra" checked>
+          <span>⛰️ Góra</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="wzgórze" checked>
+          <span>🌄 Wzgórze</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="jaskinia" checked>
+          <span>🦇 Jaskinia</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="park" checked>
+          <span>🌳 Park</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="pole" checked>
+          <span>🌾 Pole</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="łąka" checked>
+          <span>🌼 Łąka</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="niebo" checked>
+          <span>🌌 Niebo</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-place" value="inne" checked>
+          <span>🤔 Inne</span>
+        </label>
+      </details>
+      <details class="filter-section">
+        <summary>
+          <span>Województwo</span>
+          <button class="toggle-section" data-target="filter-woj" type="button">✓</button>
+        </summary>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="dolnośląskie" checked>
+          <span>Dolnośląskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="kujawsko-pomorskie" checked>
+          <span>Kujawsko-Pomorskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="lubelskie" checked>
+          <span>Lubelskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="lubuskie" checked>
+          <span>Lubuskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="łódzkie" checked>
+          <span>Łódzkie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="małopolskie" checked>
+          <span>Małopolskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="mazowieckie" checked>
+          <span>Mazowieckie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="opolskie" checked>
+          <span>Opolskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="podkarpackie" checked>
+          <span>Podkarpackie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="podlaskie" checked>
+          <span>Podlaskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="pomorskie" checked>
+          <span>Pomorskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="śląskie" checked>
+          <span>Śląskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="świętokrzyskie" checked>
+          <span>Świętokrzyskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="warmińsko-mazurskie" checked>
+          <span>Warmińsko-Mazurskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="wielkopolskie" checked>
+          <span>Wielkopolskie</span>
+        </label>
+
+        <label class="filter-card">
+          <input type="checkbox" class="filter-woj" value="zachodniopomorskie" checked>
+          <span>Zachodniopomorskie</span>
+        </label>
+
+      </details>
+      <details class="filter-section">
+        <summary>
+          <span>Powiat</span>
+        </summary>
+
+        <div class="search-filter autocomplete">
+          <div class="search-row">
+            <input type="text" id="powiat-search" placeholder="Wpisz powiat..." autocomplete="off">
+
+            <button id="clear-powiat" class="clear-search" type="button">×</button>
+          </div>
+
+          <div id="powiat-hint" class="powiat-hint"></div>
+        </div>
+      </details>
+
+      <details class="filter-section">
+        <summary>
+          <span>Gmina</span>
+        </summary>
+
+        <div class="search-filter autocomplete">
+          <div class="search-row">
+            <input type="text" id="gmina-search" placeholder="Wpisz gminę..." autocomplete="off">
+
+            <button id="clear-gmina" class="clear-search" type="button">×</button>
+          </div>
+
+          <div id="gmina-hint" class="powiat-hint"></div>
+        </div>
+      </details>
+
+      <details class="filter-section">
+        <summary>
+          <span>Miejscowość</span>
+        </summary>
+
+        <div class="search-filter autocomplete">
+          <div class="search-row">
+
+            <input type="text" id="miejscowosc-search" placeholder="Wpisz miejscowość..." autocomplete="off">
+
+            <button id="clear-miejscowosc" class="clear-search" type="button">×</button>
+          </div>
+
+          <div id="miejscowosc-hint" class="powiat-hint"></div>
+
+        </div>
+      </details>
+
+      <details class="filter-section">
+        <summary>
+          <span>Okres</span>
+        </summary>
+
+        <div class="period-filter">
+          <div class="period-labels">
+            <span id="period-from-label">Dawno temu</span>
+            <span id="period-to-label">XXI wiek</span>
+          </div>
+
+          <div class="period-slider">
+            <input type="range" id="period-from" min="0" max="4" value="0" step="1">
+            <input type="range" id="period-to" min="0" max="4" value="4" step="1">
+          </div>
+
+          <label class="filter-card period-unknown-card">
+            <input type="checkbox" id="show-unknown-period" checked>
+            <span>Pokaż nieznany okres</span>
+          </label>
+        </div>
+      </details>
+
+    </aside>
+
+    <button id="sidebar-toggle" class="sidebar-toggle" type="button">
+      ❮
+    </button>
+
+    <div class="basemap-control" id="basemap-control">
+
+      <button id="basemap-toggle" class="basemap-toggle" type="button">
+      </button>
+
+      <div class="basemap-options">
+        <button class="basemap-btn active" data-layer="osm">
+          🗺 Standard
+        </button>
+
+        <button class="basemap-btn" data-layer="dark">
+          🌑 Ciemna
+        </button>
+
+        <button class="basemap-btn" data-layer="topo">
+          🌄 Topograficzna
+        </button>
+
+        <button class="basemap-btn" data-layer="satellite">
+          🛰 Satelita
+        </button>
+      </div>
+
+    </div>
+
+    <main id="map"></main>
+    <div id="legend-counter" class="legend-counter">
+      Wyświetlono 0 z 0 legend
+    </div>
+
+    <aside id="details-panel" class="details-panel">
+      <button id="close-details" class="close-details">×</button>
+      <div id="details-content"></div>
+    </aside>
+
+  </div>
+
+  <div
+  id="publicPhotoLightbox"
+  class="public-photo-lightbox hidden"
+  aria-hidden="true"
+>
+  <button
+    id="closePublicPhotoLightbox"
+    class="public-photo-lightbox-close"
+    type="button"
+    aria-label="Zamknij podgląd"
+  >
+    ×
+  </button>
+
+  <button
+    id="publicPhotoPrevious"
+    class="public-photo-nav public-photo-previous"
+    type="button"
+    aria-label="Poprzednie zdjęcie"
+  >
+    ‹
+  </button>
+
+  <img
+    id="publicPhotoLightboxImage"
+    class="public-photo-lightbox-image"
+    src=""
+    alt=""
+  >
+
+  <button
+    id="publicPhotoNext"
+    class="public-photo-nav public-photo-next"
+    type="button"
+    aria-label="Następne zdjęcie"
+  >
+    ›
+  </button>
+
+  <div class="public-photo-lightbox-footer">
+    <p id="publicPhotoLightboxCaption"></p>
+    <span id="publicPhotoLightboxCounter"></span>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
