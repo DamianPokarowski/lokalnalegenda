@@ -375,3 +375,58 @@ input[readonly]::selection {
     box-shadow:
         0 2px 5px rgba(0,0,0,.45);
 }
+
+.photo-preview-item {
+    position: relative;
+    display: inline-block;
+}
+
+.photo-preview-item img {
+    display: block;
+}
+
+.photo-remove-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+
+    width: 28px;
+    height: 28px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-radius: 50%;
+
+    background: rgba(150, 15, 15, 0.92);
+    color: #fff;
+
+    font-size: 22px;
+    font-weight: bold;
+    line-height: 1;
+
+    cursor: pointer;
+    z-index: 2;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+    transition:
+        transform 0.15s ease,
+        background 0.15s ease;
+}
+
+.photo-remove-btn:hover {
+    background: #d12020;
+    transform: scale(1.1);
+}
+
+.photo-remove-btn:active {
+    transform: scale(0.95);
+}
+
+.photo-remove-btn:focus-visible {
+    outline: 2px solid #ffe8a6;
+    outline-offset: 2px;
+}

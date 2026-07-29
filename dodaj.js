@@ -363,9 +363,86 @@ typOkresuInput.addEventListener("change", () => {
     }
 });
 
-zdjeciaInput.addEventListener("change", () => {
+function ustawWybraneZdjecia(files) {
+    const dataTransfer = new DataTransfer();
+
+    files.forEach(file => {
+        dataTransfer.items.add(file);
+    });
+
+    zdjeciaInput.files = dataTransfer.files;
+}
+
+function renderPhotoPreviews() {
     clearPhotoPreviewUrls();
 
+    const files = [...zdjeciaInput.files];
+
+    files.forEach((file, index) => {
+        const previewUrl = URL.createObjectURL(file);
+
+        photoPreviewUrls.push(previewUrl);
+
+        const previewItem = document.createElement("div");
+        previewItem.className = "photo-preview-item";
+
+        const img = document.createElement("img");
+        img.src = previewUrl;
+        img.alt = file.name;
+
+        img.addEventListener("error", () => {
+            previewItem.remove();
+        });
+
+        const removeButton = document.createElement("button");
+
+        removeButton.type = "button";
+        removeButton.className = "photo-remove-btn";
+        removeButton.setAttribute(
+            "aria-label",
+            `Usuń zdjęcie ${file.name}`
+        );
+        removeButton.title = "Usuń zdjęcie";
+        removeButton.textContent = "×";
+
+        removeButton.addEventListener("click", () => {
+            const aktualnePliki = [...zdjeciaInput.files];
+
+            const pozostalePliki = aktualnePliki.filter(
+                (_, fileIndex) => fileIndex !== index
+            );
+
+            ustawWybraneZdjecia(pozostalePliki);
+            renderPhotoPreviews();
+
+            if (pozostalePliki.length === 0) {
+                showMessage(
+                    "Usunięto wszystkie zdjęcia.",
+                    false
+                );
+
+                return;
+            }
+
+            const odmiana =
+                pozostalePliki.length === 1
+                    ? "zdjęcie"
+                    : "zdjęcia";
+
+            showMessage(
+                `Pozostało ${pozostalePliki.length} ${odmiana}.`,
+                false
+            );
+        });
+
+        previewItem.appendChild(img);
+        previewItem.appendChild(removeButton);
+
+        photoPreview.appendChild(previewItem);
+    });
+}
+
+zdjeciaInput.addEventListener("change", () => {
     const wszystkiePliki = [...zdjeciaInput.files];
     const poprawnePliki = [];
 
@@ -387,29 +464,8 @@ zdjeciaInput.addEventListener("change", () => {
         }
     }
 
-    const dataTransfer = new DataTransfer();
-
-    poprawnePliki.forEach(file => {
-        dataTransfer.items.add(file);
-    });
-
-    zdjeciaInput.files = dataTransfer.files;
-
-    poprawnePliki.forEach(file => {
-        const previewUrl = URL.createObjectURL(file);
-
-        photoPreviewUrls.push(previewUrl);
-
-        const img = document.createElement("img");
-        img.src = previewUrl;
-        img.alt = file.name;
-
-        img.addEventListener("error", () => {
-            img.remove();
-        });
-
-        photoPreview.appendChild(img);
-    });
+    ustawWybraneZdjecia(poprawnePliki);
+    renderPhotoPreviews();
 
     if (pierwszyBlad) {
         showMessage(pierwszyBlad, true);
@@ -421,6 +477,7 @@ zdjeciaInput.addEventListener("change", () => {
             "Możesz dodać maksymalnie 3 zdjęcia. Zachowano pierwsze 3 prawidłowe pliki.",
             false
         );
+
         return;
     }
 
