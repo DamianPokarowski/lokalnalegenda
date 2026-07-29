@@ -366,14 +366,6 @@ typOkresuInput.addEventListener("change", () => {
 
 function ustawWybraneZdjecia(files) {
     selectedPhotoFiles = [...files];
-
-    const dataTransfer = new DataTransfer();
-
-    selectedPhotoFiles.forEach(file => {
-        dataTransfer.items.add(file);
-    });
-
-    zdjeciaInput.files = dataTransfer.files;
 }
 
 function czyTenSamPlik(fileA, fileB) {
@@ -489,6 +481,7 @@ zdjeciaInput.addEventListener("change", () => {
 
     ustawWybraneZdjecia(polaczonePliki);
     renderPhotoPreviews();
+    zdjeciaInput.value = "";
 
     if (pierwszyBlad) {
         showMessage(pierwszyBlad, true);
@@ -549,7 +542,7 @@ form.addEventListener("submit", async event => {
         return;
     }
 
-    const filesToUpload = [...zdjeciaInput.files];
+    const filesToUpload = [...selectedPhotoFiles];
 
     if (filesToUpload.length > 3) {
         showMessage("Możesz przesłać maksymalnie 3 zdjęcia.", true);
@@ -641,6 +634,7 @@ form.addEventListener("submit", async event => {
 
         form.reset();
         selectedPhotoFiles = [];
+        zdjeciaInput.value = "";
         clearPhotoPreviewUrls();
 
         if (selectedMarker) {
