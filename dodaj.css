@@ -385,6 +385,16 @@ input[readonly]::selection {
     display: block;
 }
 
+.photo-preview-item {
+    position: relative;
+    display: inline-block;
+    overflow: visible;
+}
+
+.photo-preview-item img {
+    display: block;
+}
+
 .photo-remove-btn {
     position: absolute;
     top: 6px;
@@ -398,28 +408,39 @@ input[readonly]::selection {
     justify-content: center;
 
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(255, 232, 166, 0.85);
     border-radius: 50%;
 
-    background: rgba(150, 15, 15, 0.92);
-    color: #fff;
+    background: rgba(20, 20, 18, 0.92);
+    color: #d4af37;
 
+    font-family: Arial, sans-serif;
     font-size: 22px;
     font-weight: bold;
     line-height: 1;
 
     cursor: pointer;
-    z-index: 2;
+    z-index: 5;
 
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.75),
+        0 0 6px rgba(212, 175, 55, 0.2);
+
     transition:
         transform 0.15s ease,
-        background 0.15s ease;
+        background 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .photo-remove-btn:hover {
-    background: #d12020;
+    background: #d4af37;
+    color: #111;
     transform: scale(1.1);
+
+    box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.8),
+        0 0 10px rgba(212, 175, 55, 0.5);
 }
 
 .photo-remove-btn:active {

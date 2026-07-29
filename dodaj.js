@@ -101,6 +101,7 @@ const ogolnyOkresInput = document.querySelector("#ogolny_okres");
 const zdjeciaInput = document.querySelector("#zdjecia");
 const photoPreview = document.querySelector("#photo-preview");
 let photoPreviewUrls = [];
+let selectedPhotoFiles = [];
 
 const form = document.querySelector("#place-form");
 const submitBtn = document.querySelector("#submit-btn");
@@ -364,21 +365,29 @@ typOkresuInput.addEventListener("change", () => {
 });
 
 function ustawWybraneZdjecia(files) {
+    selectedPhotoFiles = [...files];
+
     const dataTransfer = new DataTransfer();
 
-    files.forEach(file => {
+    selectedPhotoFiles.forEach(file => {
         dataTransfer.items.add(file);
     });
 
     zdjeciaInput.files = dataTransfer.files;
 }
 
+function czyTenSamPlik(fileA, fileB) {
+    return (
+        fileA.name === fileB.name &&
+        fileA.size === fileB.size &&
+        fileA.lastModified === fileB.lastModified
+    );
+}
+
 function renderPhotoPreviews() {
     clearPhotoPreviewUrls();
 
-    const files = [...zdjeciaInput.files];
-
-    files.forEach((file, index) => {
+    selectedPhotoFiles.forEach((file, index) => {
         const previewUrl = URL.createObjectURL(file);
 
         photoPreviewUrls.push(previewUrl);
@@ -402,13 +411,12 @@ function renderPhotoPreviews() {
             "aria-label",
             `Usuń zdjęcie ${file.name}`
         );
+
         removeButton.title = "Usuń zdjęcie";
         removeButton.textContent = "×";
 
         removeButton.addEventListener("click", () => {
-            const aktualnePliki = [...zdjeciaInput.files];
-
-            const pozostalePliki = aktualnePliki.filter(
+            const pozostalePliki = selectedPhotoFiles.filter(
                 (_, fileIndex) => fileIndex !== index
             );
 
@@ -443,12 +451,15 @@ function renderPhotoPreviews() {
 }
 
 zdjeciaInput.addEventListener("change", () => {
-    const wszystkiePliki = [...zdjeciaInput.files];
-    const poprawnePliki = [];
+    const nowePliki = [...zdjeciaInput.files];
 
     let pierwszyBlad = null;
+    let przekroczonoLimit = false;
+    let znalezionoDuplikat = false;
 
-    for (const file of wszystkiePliki) {
+    const polaczonePliki = [...selectedPhotoFiles];
+
+    for (const file of nowePliki) {
         const blad = walidujZdjecie(file);
 
         if (blad) {
@@ -459,12 +470,24 @@ zdjeciaInput.addEventListener("change", () => {
             continue;
         }
 
-        if (poprawnePliki.length < 3) {
-            poprawnePliki.push(file);
+        const plikJuzIstnieje = polaczonePliki.some(
+            existingFile => czyTenSamPlik(existingFile, file)
+        );
+
+        if (plikJuzIstnieje) {
+            znalezionoDuplikat = true;
+            continue;
         }
+
+        if (polaczonePliki.length >= 3) {
+            przekroczonoLimit = true;
+            continue;
+        }
+
+        polaczonePliki.push(file);
     }
 
-    ustawWybraneZdjecia(poprawnePliki);
+    ustawWybraneZdjecia(polaczonePliki);
     renderPhotoPreviews();
 
     if (pierwszyBlad) {
@@ -472,23 +495,32 @@ zdjeciaInput.addEventListener("change", () => {
         return;
     }
 
-    if (wszystkiePliki.length > 3) {
+    if (przekroczonoLimit) {
         showMessage(
-            "Możesz dodać maksymalnie 3 zdjęcia. Zachowano pierwsze 3 prawidłowe pliki.",
+            "Możesz dodać maksymalnie 3 zdjęcia.",
+            true
+        );
+
+        return;
+    }
+
+    if (znalezionoDuplikat) {
+        showMessage(
+            "To zdjęcie zostało już wcześniej wybrane.",
             false
         );
 
         return;
     }
 
-    if (poprawnePliki.length > 0) {
+    if (selectedPhotoFiles.length > 0) {
         const odmiana =
-            poprawnePliki.length === 1
+            selectedPhotoFiles.length === 1
                 ? "zdjęcie"
                 : "zdjęcia";
 
         showMessage(
-            `Wybrano ${poprawnePliki.length} ${odmiana}.`,
+            `Wybrano ${selectedPhotoFiles.length} ${odmiana}.`,
             false
         );
     }
@@ -608,6 +640,7 @@ form.addEventListener("submit", async event => {
         }
 
         form.reset();
+        selectedPhotoFiles = [];
         clearPhotoPreviewUrls();
 
         if (selectedMarker) {
