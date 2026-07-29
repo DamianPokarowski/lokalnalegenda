@@ -174,7 +174,7 @@ body {
   transform: rotate(90deg);
 }
 
-.filter-section summary span {
+.filter-section summary > span:not(.toggle-section) {
   flex: 1;
 }
 
@@ -216,14 +216,22 @@ body {
 }
 
 .toggle-section {
+  flex: 0 0 26px;
   width: 26px;
   height: 26px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   border: 1px solid rgba(212, 175, 55, 0.55);
   border-radius: 6px;
   background: linear-gradient(180deg, #2a241d, #12100d);
   color: #d4af37;
+
   cursor: pointer;
   font-weight: bold;
+  line-height: 1;
 }
 
 .toggle-section:hover {
