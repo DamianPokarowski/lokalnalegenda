@@ -15,6 +15,11 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="dodaj.css">
 
+  <link rel="preconnect" href="https://challenges.cloudflare.com">
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer>
+  </script>
+
 </head>
 
 <body>
@@ -165,6 +170,12 @@
         <input type="hidden" id="lat">
         <input type="hidden" id="lng">
 
+        <div class="turnstile-wrapper">
+          <div class="cf-turnstile" data-sitekey="0x4AAAAAAEB4A5Ppuu9Gt5IH" data-action="submit_report" data-theme="dark"
+            data-size="flexible" data-language="pl">
+          </div>
+        </div>
+
         <button type="submit" id="submit-btn">Wyślij zgłoszenie</button>
 
         <p id="form-message"></p>
@@ -187,13 +198,13 @@
     </section>
   </main>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="dodaj.js?v=20260711-3"></script>
+  <script src="dodaj.js?v=20260730-1"></script>
 </body>
 
 </html>

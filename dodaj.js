@@ -519,6 +519,62 @@ zdjeciaInput.addEventListener("change", () => {
     }
 });
 
+async function verifyTurnstileBeforeSubmit() {
+    const tokenInput = document.querySelector(
+        'input[name="cf-turnstile-response"]'
+    );
+
+    const token = tokenInput?.value?.trim() || "";
+
+    if (!token) {
+        throw new Error(
+            "Potwierdź, że nie jesteś robotem."
+        );
+    }
+
+    const response = await fetch(
+        "/.netlify/functions/verify-turnstile",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ token })
+        }
+    );
+
+    let result;
+
+    try {
+        result = await response.json();
+    } catch {
+        throw new Error(
+            "Serwer zwrócił nieprawidłową odpowiedź zabezpieczenia."
+        );
+    }
+
+    if (!response.ok || !result.success) {
+        const error = new Error(
+            result?.error ||
+            "Nie udało się potwierdzić zabezpieczenia."
+        );
+
+        error.turnstileFailure = true;
+        throw error;
+    }
+
+    return true;
+}
+
+function resetTurnstileWidget() {
+    if (
+        window.turnstile &&
+        typeof window.turnstile.reset === "function"
+    ) {
+        window.turnstile.reset();
+    }
+}
+
 form.addEventListener("submit", async event => {
     event.preventDefault();
 
@@ -563,6 +619,18 @@ form.addEventListener("submit", async event => {
     showMessage("Trwa wysyłanie zgłoszenia...", false);
 
     try {
+        showMessage(
+            "Sprawdzanie zabezpieczenia...",
+            false
+        );
+
+        await verifyTurnstileBeforeSubmit();
+
+        showMessage(
+            "Trwa wysyłanie zgłoszenia...",
+            false
+        );
+
         const session = await ensureSubmissionSession();
         const payload = {
             nazwa: value("#nazwa"),
@@ -636,6 +704,7 @@ form.addEventListener("submit", async event => {
         selectedPhotoFiles = [];
         zdjeciaInput.value = "";
         clearPhotoPreviewUrls();
+        resetTurnstileWidget();
 
         if (selectedMarker) {
             map.removeLayer(selectedMarker);
@@ -655,6 +724,7 @@ form.addEventListener("submit", async event => {
                 : "Wystąpił błąd podczas wysyłania zgłoszenia.";
 
         showMessage(komunikat, true);
+        resetTurnstileWidget();
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = "Wyślij zgłoszenie";

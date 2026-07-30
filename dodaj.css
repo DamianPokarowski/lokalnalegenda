@@ -451,3 +451,15 @@ input[readonly]::selection {
     outline: 2px solid #ffe8a6;
     outline-offset: 2px;
 }
+
+.turnstile-wrapper {
+  width: 100%;
+  margin: 18px 0 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.turnstile-wrapper .cf-turnstile {
+  width: 100%;
+  max-width: 420px;
+}

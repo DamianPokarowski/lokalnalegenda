@@ -76,10 +76,43 @@ export default async (request) => {
             );
         }
 
+        const allowedHostnames = new Set([
+            "lokalnalegenda.netlify.app"
+        ]);
+
+        if (!allowedHostnames.has(verification.hostname)) {
+            console.warn(
+                "Nieprawidłowy hostname Turnstile:",
+                verification.hostname
+            );
+
+            return jsonResponse(
+                {
+                    success: false,
+                    error: "Weryfikacja pochodzi z nieprawidłowej domeny."
+                },
+                403
+            );
+        }
+
+        if (verification.action !== "submit_report") {
+            console.warn(
+                "Nieprawidłowa akcja Turnstile:",
+                verification.action
+            );
+
+            return jsonResponse(
+                {
+                    success: false,
+                    error: "Nieprawidłowy typ weryfikacji."
+                },
+                403
+            );
+        }
+
         return jsonResponse({
             success: true,
-            message: "Token Turnstile został poprawnie zweryfikowany.",
-            hostname: verification.hostname ?? null
+            message: "Token Turnstile został poprawnie zweryfikowany."
         });
     } catch (error) {
         console.error("Turnstile verification error:", error);
