@@ -25,13 +25,13 @@ export default async (request) => {
 
     try {
         const result = await supabaseRequest(
-            "historia",
+            "zgloszenia",
             {
                 method: "GET",
                 headers: {
                     Prefer: "count=exact"
                 },
-                query: "?select=id&limit=1"
+                query: "?select=id&status=eq.opublikowany&limit=1"
             }
         );
 
