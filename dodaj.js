@@ -579,29 +579,53 @@ form.addEventListener("submit", async event => {
     event.preventDefault();
 
     if (!latInput.value || !lngInput.value) {
-        showMessage("Najpierw kliknij miejsce na mapie.", true);
+        showMessage(
+            "Najpierw kliknij miejsce na mapie.",
+            true
+        );
         return;
     }
 
-    if (typZrodlaInput.value === "przekaz ustny" && !osobaInput.value) {
-        showMessage("Wybierz osobę przekazującą.", true);
+    if (
+        typZrodlaInput.value === "przekaz ustny" &&
+        !osobaInput.value
+    ) {
+        showMessage(
+            "Wybierz osobę przekazującą.",
+            true
+        );
         return;
     }
 
-    if (typOkresuInput.value === "dokładna data" && !dokladnaDataInput.value) {
-        showMessage("Wybierz dokładną datę.", true);
+    if (
+        typOkresuInput.value === "dokładna data" &&
+        !dokladnaDataInput.value
+    ) {
+        showMessage(
+            "Wybierz dokładną datę.",
+            true
+        );
         return;
     }
 
-    if (typOkresuInput.value === "ogólny okres" && !ogolnyOkresInput.value) {
-        showMessage("Wybierz ogólny okres.", true);
+    if (
+        typOkresuInput.value === "ogólny okres" &&
+        !ogolnyOkresInput.value
+    ) {
+        showMessage(
+            "Wybierz ogólny okres.",
+            true
+        );
         return;
     }
 
     const filesToUpload = [...selectedPhotoFiles];
 
     if (filesToUpload.length > 3) {
-        showMessage("Możesz przesłać maksymalnie 3 zdjęcia.", true);
+        showMessage(
+            "Możesz przesłać maksymalnie 3 zdjęcia.",
+            true
+        );
         return;
     }
 
@@ -614,104 +638,159 @@ form.addEventListener("submit", async event => {
         }
     }
 
+    const tokenInput = document.querySelector(
+        'input[name="cf-turnstile-response"]'
+    );
+
+    const turnstileToken =
+        tokenInput?.value?.trim() || "";
+
+    if (!turnstileToken) {
+        showMessage(
+            "Potwierdź, że nie jesteś robotem.",
+            true
+        );
+        return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = "Wysyłanie...";
-    showMessage("Trwa wysyłanie zgłoszenia...", false);
 
     try {
         showMessage(
-            "Sprawdzanie zabezpieczenia...",
+            "Przygotowywanie zgłoszenia...",
             false
         );
 
-        await verifyTurnstileBeforeSubmit();
+        const session =
+            await ensureSubmissionSession();
 
-        showMessage(
-            "Trwa wysyłanie zgłoszenia...",
-            false
-        );
+        if (!session?.access_token) {
+            throw new Error(
+                "Nie udało się utworzyć bezpiecznej sesji zgłoszenia."
+            );
+        }
 
-        const session = await ensureSubmissionSession();
         const payload = {
             nazwa: value("#nazwa"),
             kategoria: value("#kategoria"),
             opis: value("#opis"),
             typ_miejsca: value("#typ_miejsca"),
-            dokladnosc_miejsca: value("#dokladnosc_miejsca"),
+            dokladnosc_miejsca:
+                value("#dokladnosc_miejsca"),
+
             miejscowosc: value("#miejscowosc"),
             gmina: value("#gmina"),
             powiat: value("#powiat"),
             wojewodztwo: value("#wojewodztwo"),
+
             typ_zrodla: value("#typ_zrodla"),
-            osoba_przekazujaca: value("#osoba_przekazujaca") || null,
+
+            osoba_przekazujaca:
+                value("#osoba_przekazujaca") || null,
+
             typ_okresu: value("#typ_okresu"),
-            dokladna_data: value("#dokladna_data") || null,
-            ogolny_okres: value("#ogolny_okres") || null,
+
+            dokladna_data:
+                value("#dokladna_data") || null,
+
+            ogolny_okres:
+                value("#ogolny_okres") || null,
+
             lat: Number(latInput.value),
-            lng: Number(lngInput.value),
-            status: "oczekuje",
-            submitted_by: session.user.id
+            lng: Number(lngInput.value)
         };
 
-        const { data, error } = await supabaseClient
-            .from("zgloszenia")
-            .insert(payload)
-            .select("id")
-            .single();
+        const requestData = new FormData();
 
-        if (error) throw error;
+        requestData.append(
+            "turnstileToken",
+            turnstileToken
+        );
 
-        const zgloszenieId = data.id;
+        requestData.append(
+            "accessToken",
+            session.access_token
+        );
+
+        requestData.append(
+            "payload",
+            JSON.stringify(payload)
+        );
 
         for (const file of filesToUpload) {
-            const compressed = await compressImage(file);
+            showMessage(
+                "Przetwarzanie zdjęć...",
+                false
+            );
 
-            const safeName = file.name
-                .toLowerCase()
-                .replaceAll(" ", "_")
-                .replace(/[^a-z0-9._-]/g, "");
+            const compressed =
+                await compressImage(file);
 
-            const filePath = `${session.user.id}/zgloszenie_${zgloszenieId}/${Date.now()}_${safeName}`;
+            requestData.append(
+                "photos",
+                compressed,
+                compressed.name
+            );
+        }
 
-            const { error: uploadError } = await supabaseClient
-                .storage
-                .from("zdjecia")
-                .upload(filePath, compressed, {
-                    contentType: compressed.type,
-                    upsert: false
-                });
+        showMessage(
+            "Zapisywanie zgłoszenia...",
+            false
+        );
 
-            if (uploadError) throw uploadError;
+        const response = await fetch(
+            "/.netlify/functions/submit-report",
+            {
+                method: "POST",
+                body: requestData
+            }
+        );
 
-            const { data: publicData } = supabaseClient
-                .storage
-                .from("zdjecia")
-                .getPublicUrl(filePath);
+        let result;
 
-            const { error: photoError } = await supabaseClient
-                .from("zdjecia")
-                .insert({
-                    zgloszenie_id: zgloszenieId,
-                    sciezka: filePath,
-                    url: publicData.publicUrl,
-                    submitted_by: session.user.id
-                });
+        try {
+            result = await response.json();
+        } catch {
+            throw new Error(
+                "Serwer zwrócił nieprawidłową odpowiedź."
+            );
+        }
 
-            if (photoError) throw photoError;
+        if (!response.ok || !result.success) {
+            const error = new Error(
+                result?.error ||
+                "Nie udało się wysłać zgłoszenia."
+            );
+
+            error.code = result?.code || null;
+            throw error;
         }
 
         form.reset();
+
         selectedPhotoFiles = [];
         zdjeciaInput.value = "";
+
         clearPhotoPreviewUrls();
         resetTurnstileWidget();
+
+        osobaWrapper.classList.add("hidden");
+        dokladnaDataWrapper.classList.add("hidden");
+        ogolnyOkresWrapper.classList.add("hidden");
+
+        latInput.value = "";
+        lngInput.value = "";
 
         if (selectedMarker) {
             map.removeLayer(selectedMarker);
             selectedMarker = null;
         }
 
-        showMessage("Zgłoszenie zostało wysłane. Dziękujemy!", false);
+        showMessage(
+            "Zgłoszenie zostało wysłane. Dziękujemy!",
+            false
+        );
     } catch (error) {
         console.error(
             "Błąd wysyłania zgłoszenia:",
@@ -719,7 +798,8 @@ form.addEventListener("submit", async event => {
         );
 
         const komunikat =
-            error instanceof Error && error.message
+            error instanceof Error &&
+            error.message
                 ? error.message
                 : "Wystąpił błąd podczas wysyłania zgłoszenia.";
 
@@ -727,7 +807,8 @@ form.addEventListener("submit", async event => {
         resetTurnstileWidget();
     } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = "Wyślij zgłoszenie";
+        submitBtn.textContent =
+            "Wyślij zgłoszenie";
     }
 });
 
