@@ -238,10 +238,10 @@
               <option value="Ogólna >200 m">Ogólna >200 m</option>
             </select>
 
-            <label>Miejscowość</label><input type="text" id="addMiejscowosc" readonly>
-            <label>Gmina</label><input type="text" id="addGmina" readonly>
-            <label>Powiat</label><input type="text" id="addPowiat" readonly>
-            <label>Województwo</label><input type="text" id="addWojewodztwo" readonly>
+            <input type="text" id="addMiejscowosc">
+            <input type="text" id="addGmina">
+            <input type="text" id="addPowiat">
+            <input type="text" id="addWojewodztwo">
 
             <label>Typ źródła *</label>
             <select id="addTypZrodla" required>
@@ -398,16 +398,16 @@
             </select>
 
             <label>Miejscowość</label>
-            <input type="text" id="editPlace" readonly>
+            <input type="text" id="editPlace">
 
             <label>Gmina</label>
-            <input type="text" id="editCommune" readonly>
+            <input type="text" id="editCommune">
 
             <label>Powiat</label>
-            <input type="text" id="editCounty" readonly>
+            <input type="text" id="editCounty">
 
             <label>Województwo</label>
-            <input type="text" id="editVoivodeship" readonly>
+            <input type="text" id="editVoivodeship">
 
             <label>Typ źródła *</label>
             <select id="editSourceType" required>
@@ -502,24 +502,14 @@
   </div>
 
   <div id="photoLightbox" class="photo-lightbox hidden" aria-hidden="true">
-  <button
-    id="closePhotoLightbox"
-    class="photo-lightbox-close"
-    type="button"
-    aria-label="Zamknij podgląd zdjęcia"
-  >
-    ×
-  </button>
+    <button id="closePhotoLightbox" class="photo-lightbox-close" type="button" aria-label="Zamknij podgląd zdjęcia">
+      ×
+    </button>
 
-  <img
-    id="photoLightboxImage"
-    class="photo-lightbox-image"
-    src=""
-    alt="Podgląd zdjęcia"
-  >
+    <img id="photoLightboxImage" class="photo-lightbox-image" src="" alt="Podgląd zdjęcia">
 
-  <p id="photoLightboxCaption" class="photo-lightbox-caption"></p>
-</div>
+    <p id="photoLightboxCaption" class="photo-lightbox-caption"></p>
+  </div>
 
   <div id="toast" class="toast hidden"></div>
 
