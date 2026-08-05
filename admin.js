@@ -195,6 +195,7 @@ let addMarker;
 let addObjectsLayer;
 let pendingSave = null;
 let addPhotoPreviewUrls = [];
+let addSelectedPhotoFiles = [];
 let pendingPhotoDeletes = new Set();
 let pendingPhotoReplacements = new Map();
 let pendingNewPhotoFiles = [];
@@ -236,6 +237,43 @@ const redMarkerIcon = L.divIcon({
   iconAnchor: [16, 43],
   popupAnchor: [0, -42]
 });
+
+const DOZWOLONE_TYPY_ZDJEC = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp"
+]);
+
+const MAKSYMALNY_ROZMIAR_ZDJECIA =
+  20 * 1024 * 1024;
+
+function walidujZdjecie(file) {
+  if (!file) {
+    return "Nie wybrano pliku.";
+  }
+
+  if (!DOZWOLONE_TYPY_ZDJEC.has(file.type)) {
+    return `Plik „${file.name}” nie jest obsługiwanym zdjęciem. Dozwolone są JPG, PNG i WebP.`;
+  }
+
+  if (file.size <= 0) {
+    return `Plik „${file.name}” jest pusty.`;
+  }
+
+  if (file.size > MAKSYMALNY_ROZMIAR_ZDJECIA) {
+    return `Plik „${file.name}” jest za duży. Maksymalny rozmiar to 20 MB.`;
+  }
+
+  return null;
+}
+
+function czyTenSamPlik(fileA, fileB) {
+  return (
+    fileA.name === fileB.name &&
+    fileA.size === fileB.size &&
+    fileA.lastModified === fileB.lastModified
+  );
+}
 
 function statusLabel(status) {
   return {
@@ -407,15 +445,14 @@ function renderOtherObjects(
 
     otherMarker.bindPopup(`
       <div class="admin-other-object-popup">
-        ${
-          isDuplicate
-            ? `
+        ${isDuplicate
+        ? `
               <strong class="duplicate-popup-title">
                 ⚠ Potencjalny duplikat
               </strong>
             `
-            : ""
-        }
+        : ""
+      }
 
         <strong>${escapeHtml(record.name)}</strong>
         <span>${escapeHtml(record.category)}</span>
@@ -486,73 +523,181 @@ function renderTable() {
 }
 
 async function compressAdminImage(file) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    const reader = new FileReader();
+const bladWalidacji = walidujZdjecie(file);
 
-    reader.onerror = () => {
-      reject(new Error("Nie udało się odczytać zdjęcia."));
-    };
+    if (bladWalidacji) {
+        throw new Error(bladWalidacji);
+    }
 
-    reader.onload = event => {
-      image.src = event.target.result;
-    };
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
 
-    image.onerror = () => {
-      reject(new Error("Wybrany plik nie jest prawidłowym zdjęciem."));
-    };
+        const cleanup = () => {
+            img.onload = null;
+            img.onerror = null;
+            reader.onload = null;
+            reader.onerror = null;
+            reader.onabort = null;
+        };
 
-    image.onload = () => {
-      const maxWidth = 1400;
-      const maxHeight = 1400;
+        reader.onerror = () => {
+            cleanup();
 
-      let width = image.width;
-      let height = image.height;
+            reject(
+                new Error(
+                    `Nie udało się odczytać pliku „${file.name}”.`
+                )
+            );
+        };
 
-      if (width > height && width > maxWidth) {
-        height = Math.round(height * maxWidth / width);
-        width = maxWidth;
-      } else if (height > maxHeight) {
-        width = Math.round(width * maxHeight / height);
-        height = maxHeight;
-      }
+        reader.onabort = () => {
+            cleanup();
 
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
+            reject(
+                new Error(
+                    `Odczyt pliku „${file.name}” został przerwany.`
+                )
+            );
+        };
 
-      const context = canvas.getContext("2d");
+        reader.onload = event => {
+            if (
+                !event.target ||
+                typeof event.target.result !== "string"
+            ) {
+                cleanup();
 
-      if (!context) {
-        reject(new Error("Nie udało się przygotować zdjęcia."));
-        return;
-      }
+                reject(
+                    new Error(
+                        `Plik „${file.name}” ma nieprawidłową zawartość.`
+                    )
+                );
 
-      context.drawImage(image, 0, 0, width, height);
+                return;
+            }
 
-      canvas.toBlob(
-        blob => {
-          if (!blob) {
-            reject(new Error("Nie udało się skompresować zdjęcia."));
-            return;
-          }
+            img.src = event.target.result;
+        };
 
-          const outputName =
-            file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+        img.onerror = () => {
+            cleanup();
 
-          resolve(
-            new File([blob], outputName, {
-              type: "image/jpeg"
-            })
-          );
-        },
-        "image/jpeg",
-        0.75
-      );
-    };
+            reject(
+                new Error(
+                    `Plik „${file.name}” nie jest prawidłowym obrazem.`
+                )
+            );
+        };
 
-    reader.readAsDataURL(file);
-  });
+        img.onload = () => {
+            try {
+                const maxWidth = 1600;
+                const maxHeight = 1600;
+
+                let width = img.naturalWidth;
+                let height = img.naturalHeight;
+
+                if (
+                    !Number.isFinite(width) ||
+                    !Number.isFinite(height) ||
+                    width <= 0 ||
+                    height <= 0
+                ) {
+                    throw new Error(
+                        `Nie udało się odczytać wymiarów zdjęcia „${file.name}”.`
+                    );
+                }
+
+                if (width > height && width > maxWidth) {
+                    height = Math.round(
+                        height * maxWidth / width
+                    );
+
+                    width = maxWidth;
+                } else if (height > maxHeight) {
+                    width = Math.round(
+                        width * maxHeight / height
+                    );
+
+                    height = maxHeight;
+                }
+
+                const canvas = document.createElement("canvas");
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext("2d");
+
+                if (!ctx) {
+                    throw new Error(
+                        "Przeglądarka nie obsługuje przetwarzania zdjęć."
+                    );
+                }
+
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                    blob => {
+                        cleanup();
+
+                        if (!blob || blob.size <= 0) {
+                            reject(
+                                new Error(
+                                    `Nie udało się skompresować zdjęcia „${file.name}”.`
+                                )
+                            );
+
+                            return;
+                        }
+
+                        const baseName =
+                            file.name
+                                .replace(/\.[^/.]+$/, "")
+                                .trim() || "zdjecie";
+
+                        const compressedFile = new File(
+                            [blob],
+                            `${baseName}.jpg`,
+                            {
+                                type: "image/jpeg",
+                                lastModified: Date.now()
+                            }
+                        );
+
+                        resolve(compressedFile);
+                    },
+                    "image/jpeg",
+                    0.78
+                );
+            } catch (error) {
+                cleanup();
+
+                reject(
+                    error instanceof Error
+                        ? error
+                        : new Error(
+                            "Nie udało się przetworzyć zdjęcia."
+                        )
+                );
+            }
+        };
+
+        try {
+            reader.readAsDataURL(file);
+        } catch (error) {
+            cleanup();
+
+            reject(
+                error instanceof Error
+                    ? error
+                    : new Error(
+                        `Nie udało się otworzyć pliku „${file.name}”.`
+                    )
+            );
+        }
+    });
 }
 
 async function uploadAdminPhotos(zgloszenieId, files) {
@@ -1004,7 +1149,38 @@ function renderEditPhotos(record) {
     replacementInput.addEventListener("change", () => {
       const file = replacementInput.files?.[0];
 
+      replacementInput.value = "";
+
       if (!file) {
+        return;
+      }
+
+      const blad = walidujZdjecie(file);
+
+      if (blad) {
+        el("editFormMessage").textContent = blad;
+        return;
+      }
+
+      const duplikatWsrodNowych =
+        pendingNewPhotoFiles.some(item =>
+          czyTenSamPlik(item.file, file)
+        );
+
+      const duplikatWsrodZamian =
+        [...pendingPhotoReplacements.entries()]
+          .some(([photoId, replacement]) =>
+            Number(photoId) !== Number(photo.id) &&
+            czyTenSamPlik(replacement.file, file)
+          );
+
+      if (
+        duplikatWsrodNowych ||
+        duplikatWsrodZamian
+      ) {
+        el("editFormMessage").textContent =
+          "To zdjęcie zostało już wcześniej wybrane.";
+
         return;
       }
 
@@ -1021,6 +1197,9 @@ function renderEditPhotos(record) {
         file,
         previewUrl: URL.createObjectURL(file)
       });
+
+      el("editFormMessage").textContent =
+        "Zdjęcie zostanie zastąpione po zapisaniu zmian.";
 
       renderEditPhotos(record);
     });
@@ -1100,6 +1279,20 @@ function renderEditPhotos(record) {
       pendingNewPhotoFiles.splice(index, 1);
 
       renderEditPhotos(record);
+
+      if (pendingNewPhotoFiles.length === 0) {
+        el("editFormMessage").textContent =
+          "Usunięto wszystkie nowo wybrane zdjęcia.";
+      } else {
+        const liczba =
+          pendingNewPhotoFiles.length;
+
+        el("editFormMessage").textContent =
+          `Pozostało ${liczba} ${liczba === 1
+            ? "nowe zdjęcie"
+            : "nowe zdjęcia"
+          }.`;
+      }
     });
 
     const label = document.createElement("span");
@@ -1246,6 +1439,26 @@ function requestSave() {
 
 async function commitSave(draft) {
   try {
+    for (
+      const replacement
+      of pendingPhotoReplacements.values()
+    ) {
+      const blad =
+        walidujZdjecie(replacement.file);
+
+      if (blad) {
+        throw new Error(blad);
+      }
+    }
+
+    for (const item of pendingNewPhotoFiles) {
+      const blad =
+        walidujZdjecie(item.file);
+
+      if (blad) {
+        throw new Error(blad);
+      }
+    }
     const databaseRow = recordToDatabaseRow(draft);
 
     const { error } = await supabaseClient
@@ -1490,47 +1703,107 @@ el("editPhotos").addEventListener("change", () => {
   );
 
   if (!record) {
+    input.value = "";
     return;
   }
 
-  const existingCount = (record.photos || [])
-    .filter(
-      photo => !pendingPhotoDeletes.has(photo.id)
-    )
-    .length;
-
-  const availableSlots =
-    Math.max(0, 3 - existingCount);
-
-  const selectedFiles =
-    [...input.files].slice(0, availableSlots);
-
-  pendingNewPhotoFiles.forEach(photo => {
-    if (photo.previewUrl) {
-      URL.revokeObjectURL(photo.previewUrl);
-    }
-  });
-
-  pendingNewPhotoFiles = selectedFiles.map(file => ({
-    file,
-    previewUrl: URL.createObjectURL(file)
-  }));
-
-  if (availableSlots === 0) {
-    el("editFormMessage").textContent =
-      "Najpierw usuń jedno ze zdjęć, aby dodać nowe.";
-  } else if (input.files.length > availableSlots) {
-    el("editFormMessage").textContent =
-      `Możesz dodać jeszcze tylko ${availableSlots} ${availableSlots === 1 ? "zdjęcie" : "zdjęcia"
-      }.`;
-  } else {
-    el("editFormMessage").textContent = "";
-  }
+  const nowePliki = [...input.files];
 
   input.value = "";
 
+  const visibleExistingCount =
+    (record.photos || []).filter(
+      photo => !pendingPhotoDeletes.has(photo.id)
+    ).length;
+
+  let pierwszyBlad = null;
+  let przekroczonoLimit = false;
+  let znalezionoDuplikat = false;
+
+  for (const file of nowePliki) {
+    const blad = walidujZdjecie(file);
+
+    if (blad) {
+      if (!pierwszyBlad) {
+        pierwszyBlad = blad;
+      }
+
+      continue;
+    }
+
+    const duplikatWsrodNowych =
+      pendingNewPhotoFiles.some(item =>
+        czyTenSamPlik(item.file, file)
+      );
+
+    const duplikatWsrodZamian =
+      [...pendingPhotoReplacements.values()]
+        .some(replacement =>
+          czyTenSamPlik(replacement.file, file)
+        );
+
+    if (
+      duplikatWsrodNowych ||
+      duplikatWsrodZamian
+    ) {
+      znalezionoDuplikat = true;
+      continue;
+    }
+
+    const currentTotal =
+      visibleExistingCount +
+      pendingNewPhotoFiles.length;
+
+    if (currentTotal >= 3) {
+      przekroczonoLimit = true;
+      continue;
+    }
+
+    pendingNewPhotoFiles.push({
+      file,
+      previewUrl: URL.createObjectURL(file)
+    });
+  }
+
   renderEditPhotos(record);
+
+  if (pierwszyBlad) {
+    el("editFormMessage").textContent =
+      pierwszyBlad;
+
+    return;
+  }
+
+  if (przekroczonoLimit) {
+    el("editFormMessage").textContent =
+      "Obiekt może mieć maksymalnie 3 zdjęcia.";
+
+    return;
+  }
+
+  if (znalezionoDuplikat) {
+    el("editFormMessage").textContent =
+      "To zdjęcie zostało już wcześniej wybrane.";
+
+    return;
+  }
+
+  if (pendingNewPhotoFiles.length > 0) {
+    const liczba =
+      pendingNewPhotoFiles.length;
+
+    const odmiana =
+      liczba === 1
+        ? "nowe zdjęcie"
+        : "nowe zdjęcia";
+
+    el("editFormMessage").textContent =
+      `Wybrano ${liczba} ${odmiana}. Zapisz zmiany, aby je dodać.`;
+  } else {
+    el("editFormMessage").textContent = "";
+  }
 });
+
 el("cancelConfirm").addEventListener("click", () => {
   pendingSave = null;
   el("confirmOverlay").classList.add("hidden");
@@ -1679,6 +1952,8 @@ function openAddForm() {
 }
 
 function closeAddForm() {
+  addSelectedPhotoFiles = [];
+
   clearAddPhotoPreviewUrls();
 
   el("addZdjecia").value = "";
@@ -1778,30 +2053,147 @@ function clearAddPhotoPreviewUrls() {
   }
 }
 
-el("addZdjecia").addEventListener("change", () => {
+function renderAddPhotoPreviews() {
   clearAddPhotoPreviewUrls();
 
-  const input = el("addZdjecia");
-  const files = [...input.files].slice(0, 3);
   const preview = el("addPhotoPreview");
 
-  files.forEach(file => {
+  addSelectedPhotoFiles.forEach((file, index) => {
     const previewUrl = URL.createObjectURL(file);
 
     addPhotoPreviewUrls.push(previewUrl);
+
+    const previewItem = document.createElement("div");
+    previewItem.className = "photo-preview-item";
 
     const img = document.createElement("img");
     img.src = previewUrl;
     img.alt = file.name;
 
-    preview.appendChild(img);
-  });
+    img.addEventListener("error", () => {
+      previewItem.remove();
+    });
 
-  if (input.files.length > 3) {
+    const removeButton =
+      document.createElement("button");
+
+    removeButton.type = "button";
+    removeButton.className = "photo-remove-btn";
+    removeButton.title = "Usuń zdjęcie";
+    removeButton.textContent = "×";
+
+    removeButton.setAttribute(
+      "aria-label",
+      `Usuń zdjęcie ${file.name}`
+    );
+
+    removeButton.addEventListener("click", () => {
+      addSelectedPhotoFiles =
+        addSelectedPhotoFiles.filter(
+          (_, fileIndex) => fileIndex !== index
+        );
+
+      renderAddPhotoPreviews();
+
+      if (addSelectedPhotoFiles.length === 0) {
+        el("addFormMessage").textContent =
+          "Usunięto wszystkie zdjęcia.";
+
+        return;
+      }
+
+      const odmiana =
+        addSelectedPhotoFiles.length === 1
+          ? "zdjęcie"
+          : "zdjęcia";
+
+      el("addFormMessage").textContent =
+        `Pozostało ${addSelectedPhotoFiles.length} ${odmiana}.`;
+    });
+
+    previewItem.appendChild(img);
+    previewItem.appendChild(removeButton);
+
+    preview.appendChild(previewItem);
+  });
+}
+
+el("addZdjecia").addEventListener("change", () => {
+  const input = el("addZdjecia");
+  const nowePliki = [...input.files];
+
+  let pierwszyBlad = null;
+  let przekroczonoLimit = false;
+  let znalezionoDuplikat = false;
+
+  const polaczonePliki = [
+    ...addSelectedPhotoFiles
+  ];
+
+  for (const file of nowePliki) {
+    const blad = walidujZdjecie(file);
+
+    if (blad) {
+      if (!pierwszyBlad) {
+        pierwszyBlad = blad;
+      }
+
+      continue;
+    }
+
+    const plikJuzIstnieje =
+      polaczonePliki.some(
+        existingFile =>
+          czyTenSamPlik(existingFile, file)
+      );
+
+    if (plikJuzIstnieje) {
+      znalezionoDuplikat = true;
+      continue;
+    }
+
+    if (polaczonePliki.length >= 3) {
+      przekroczonoLimit = true;
+      continue;
+    }
+
+    polaczonePliki.push(file);
+  }
+
+  addSelectedPhotoFiles = polaczonePliki;
+
+  renderAddPhotoPreviews();
+  input.value = "";
+
+  if (pierwszyBlad) {
     el("addFormMessage").textContent =
-      "Zostaną użyte tylko pierwsze 3 zdjęcia.";
-  } else {
-    el("addFormMessage").textContent = "";
+      pierwszyBlad;
+
+    return;
+  }
+
+  if (przekroczonoLimit) {
+    el("addFormMessage").textContent =
+      "Możesz dodać maksymalnie 3 zdjęcia.";
+
+    return;
+  }
+
+  if (znalezionoDuplikat) {
+    el("addFormMessage").textContent =
+      "To zdjęcie zostało już wcześniej wybrane.";
+
+    return;
+  }
+
+  if (addSelectedPhotoFiles.length > 0) {
+    const odmiana =
+      addSelectedPhotoFiles.length === 1
+        ? "zdjęcie"
+        : "zdjęcia";
+
+    el("addFormMessage").textContent =
+      `Wybrano ${addSelectedPhotoFiles.length} ${odmiana}.`;
   }
 });
 
@@ -1901,6 +2293,13 @@ el("admin-place-form").addEventListener(
       submitButton.textContent = "Zapisywanie...";
 
       try {
+        for (const file of addSelectedPhotoFiles) {
+          const blad = walidujZdjecie(file);
+
+          if (blad) {
+            throw new Error(blad);
+          }
+        }
         const databaseRow =
           recordToDatabaseRow(record);
 
@@ -1916,8 +2315,8 @@ el("admin-place-form").addEventListener(
         }
 
         const newPhotoFiles = [
-          ...el("addZdjecia").files
-        ].slice(0, 3);
+          ...addSelectedPhotoFiles
+        ];
 
         if (newPhotoFiles.length) {
           await uploadAdminPhotos(
@@ -1927,6 +2326,8 @@ el("admin-place-form").addEventListener(
         }
 
         el("admin-place-form").reset();
+        addSelectedPhotoFiles = [];
+        el("addZdjecia").value = "";
         clearAddPhotoPreviewUrls();
         el("addFormMessage").textContent = "";
 
