@@ -1289,3 +1289,26 @@ body.photo-lightbox-open {
 .admin-photo-new {
   border-color: rgba(212, 175, 55, 0.8);
 }
+
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background: rgba(120, 120, 120, 0.22) !important;
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background: linear-gradient(
+    180deg,
+    #7c7c7c,
+    #5d5d5d
+  ) !important;
+
+  border: 2px solid #d3d3d3;
+  color: #fff !important;
+  font-weight: bold;
+
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.45);
+}

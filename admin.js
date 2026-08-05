@@ -343,23 +343,47 @@ function renderOtherObjects(
   excludedId = null,
   highlightedIds = []
 ) {
-  if (!targetMap) return targetLayer;
-
-  if (targetLayer) {
-    targetLayer.clearLayers();
-  } else {
-    targetLayer = L.layerGroup().addTo(targetMap);
+  if (!targetMap) {
+    return targetLayer;
   }
+
+  if (targetLayer && targetMap.hasLayer(targetLayer)) {
+    targetMap.removeLayer(targetLayer);
+  }
+
+  const containerLayer = L.layerGroup().addTo(targetMap);
+
+  const clusterLayer = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    maxClusterRadius: 45,
+    spiderfyOnMaxZoom: true,
+    disableClusteringAtZoom: 15,
+    removeOutsideVisibleBounds: true
+  });
+
+  const highlightedLayer = L.layerGroup();
+
+  clusterLayer.addTo(containerLayer);
+  highlightedLayer.addTo(containerLayer);
 
   const highlightedSet = new Set(highlightedIds);
 
   records.forEach(record => {
-    if (record.id === excludedId) return;
+    if (record.id === excludedId) {
+      return;
+    }
 
     const lat = Number(record.lat);
     const lng = Number(record.lng);
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      lat < -90 ||
+      lat > 90 ||
+      lng < -180 ||
+      lng > 180
+    ) {
       return;
     }
 
@@ -383,22 +407,38 @@ function renderOtherObjects(
 
     otherMarker.bindPopup(`
       <div class="admin-other-object-popup">
-        ${isDuplicate
-        ? `<strong class="duplicate-popup-title">⚠ Potencjalny duplikat</strong>`
-        : ""
-      }
+        ${
+          isDuplicate
+            ? `
+              <strong class="duplicate-popup-title">
+                ⚠ Potencjalny duplikat
+              </strong>
+            `
+            : ""
+        }
 
         <strong>${escapeHtml(record.name)}</strong>
         <span>${escapeHtml(record.category)}</span>
         <span>${escapeHtml(record.place || "")}</span>
-        <span>Status: ${escapeHtml(statusLabel(record.status))}</span>
+        <span>
+          Status: ${escapeHtml(statusLabel(record.status))}
+        </span>
       </div>
     `);
 
-    otherMarker.addTo(targetLayer);
+    /*
+      Zwykłe obiekty trafiają do klastrów.
+      Czerwone potencjalne duplikaty pozostają osobno,
+      żeby nie zostały ukryte wewnątrz klastra.
+    */
+    if (isDuplicate) {
+      otherMarker.addTo(highlightedLayer);
+    } else {
+      otherMarker.addTo(clusterLayer);
+    }
   });
 
-  return targetLayer;
+  return containerLayer;
 }
 
 function filteredRecords() {

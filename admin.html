@@ -14,6 +14,14 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="admin.css">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+  <link rel="stylesheet" href="admin.css">
+
+
 </head>
 
 <body>
@@ -238,9 +246,13 @@
               <option value="Ogólna >200 m">Ogólna >200 m</option>
             </select>
 
+            <label>Miejscowość</label>
             <input type="text" id="addMiejscowosc">
+            <label>Gmina</label>
             <input type="text" id="addGmina">
+            <label>Powiat</label>
             <input type="text" id="addPowiat">
+            <label>Województwo</label>
             <input type="text" id="addWojewodztwo">
 
             <label>Typ źródła *</label>
@@ -514,8 +526,10 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js"></script>
-</body>
 
 </html>
