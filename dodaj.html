@@ -170,9 +170,40 @@
         <input type="hidden" id="lat">
         <input type="hidden" id="lng">
 
+        <section aria-labelledby="email-confirmation-heading">
+          <h3 id="email-confirmation-heading">
+            Potwierdzenie zgłoszenia
+          </h3>
+
+          <label for="submission-email">Adres e-mail *</label>
+          <input type="email" id="submission-email" autocomplete="email" maxlength="254" required>
+
+          <p class="hint">
+            Na ten adres wyślemy kod potwierdzający zgłoszenie.
+            Adres nie będzie widoczny na mapie.
+          </p>
+
+          <button type="button" id="send-email-code">
+            Wyślij kod na e-mail
+          </button>
+
+          <p id="email-code-message" class="hint" role="status"></p>
+
+          <label for="submission-email-code">
+            Kod z wiadomości *
+          </label>
+          <input type="text" id="submission-email-code" inputmode="numeric" autocomplete="one-time-code"
+            pattern="[0-9]{4}" minlength="4" maxlength="4" placeholder="0000" required>
+
+          <p class="hint">
+            Kod jest ważny przez 10 minut.
+            Po wysłaniu nowego kodu poprzedni przestaje działać.
+          </p>
+        </section>
+
         <div class="turnstile-wrapper">
-          <div class="cf-turnstile" data-sitekey="0x4AAAAAAEB4A5Ppuu9Gt5IH" data-action="submit_report" data-theme="dark"
-            data-size="flexible" data-language="pl">
+          <div class="cf-turnstile" data-sitekey="0x4AAAAAAEB4A5Ppuu9Gt5IH" data-action="submit_report"
+            data-theme="dark" data-size="flexible" data-language="pl">
           </div>
         </div>
 
@@ -204,7 +235,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="dodaj.js?v=20260730-1"></script>
+  <script src="dodaj.js?v=email-1"></script>
+  <script src="email-confirmation.js?v=email-1"></script>
 </body>
 
 </html>

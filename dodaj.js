@@ -608,6 +608,7 @@ form.addEventListener("submit", async event => {
 
     submitBtn.disabled = true;
     submitBtn.textContent = "Wysyłanie...";
+    window.setEmailSubmissionBusy(true);
 
     try {
         showMessage(
@@ -655,6 +656,13 @@ form.addEventListener("submit", async event => {
         };
 
         const requestData = new FormData();
+
+        requestData.append(
+            "emailConfirmation",
+            JSON.stringify(
+                window.getSubmissionEmailConfirmation()
+            )
+        );
 
         requestData.append(
             "turnstileToken",
@@ -752,13 +760,14 @@ form.addEventListener("submit", async event => {
 
         const komunikat =
             error instanceof Error &&
-            error.message
+                error.message
                 ? error.message
                 : "Wystąpił błąd podczas wysyłania zgłoszenia.";
 
         showMessage(komunikat, true);
         resetTurnstileWidget();
     } finally {
+        window.setEmailSubmissionBusy(false);
         submitBtn.disabled = false;
         submitBtn.textContent =
             "Wyślij zgłoszenie";

@@ -10,6 +10,10 @@ import {
     supabaseRequest
 } from "./lib/supabase.mjs";
 
+import {
+    buildEmailConfirmation
+} from "./lib/email-code.mjs";
+
 const MAX_PHOTOS = 3;
 const MAX_SINGLE_PHOTO_SIZE = 4 * 1024 * 1024;
 const MAX_TOTAL_PHOTO_SIZE = 6 * 1024 * 1024;
@@ -350,6 +354,27 @@ export default async request => {
 
         validatePhotos(photos);
 
+        let emailConfirmation;
+
+        try {
+            const confirmationInput = JSON.parse(
+                String(formData.get("emailConfirmation") || "null")
+            );
+
+            emailConfirmation = buildEmailConfirmation(
+                confirmationInput,
+                user.id
+            );
+        } catch {
+            return jsonResponse(
+                {
+                    success: false,
+                    error: "Podaj adres e-mail i poprawny czterocyfrowy kod."
+                },
+                400
+            );
+        }
+
         const insertResult =
             await supabaseRequest(
                 "zgloszenia",
@@ -364,7 +389,8 @@ export default async request => {
                     body: JSON.stringify({
                         ...cleanPayload,
                         status: "oczekuje",
-                        submitted_by: user.id
+                        submitted_by: user.id,
+                        email_confirmation: emailConfirmation
                     }),
                     query: "?select=id"
                 }
@@ -376,11 +402,17 @@ export default async request => {
                 : insertResult.data;
 
         if (!report?.id) {
-            throw new Error(
-                "Baza nie zwróciła identyfikatora zgłoszenia."
+            return jsonResponse(
+                {
+                    success: false,
+                    error:
+                        "Kod jest nieprawidłowy, wygasł, został już użyty " +
+                        "albo przekroczono limit 5 prób. " +
+                        "Sprawdź kod lub wyślij nowy."
+                },
+                400
             );
         }
-
         for (
             let index = 0;
             index < photos.length;
